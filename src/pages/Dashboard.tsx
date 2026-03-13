@@ -20,6 +20,16 @@ const Dashboard = () => {
   const pendingTasks = mockTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
   const activeStaff = mockUsers.filter(u => u.is_active).length;
 
+  // Perfect donut proportions - THICKER strokeWidth with VIVID colors
+  const patientsByDept = [
+    { name: 'Cardiology', count: 25, color: '#10b981' },
+    { name: 'Orthopedics', count: 18, color: '#3b82f6' },
+    { name: 'Neurology', count: 22, color: '#8b5cf6' },
+    { name: 'Pediatrics', count: 30, color: '#f97316' },
+    { name: 'Emergency', count: 15, color: '#ec4899' },
+  ];
+  const totalPatients = patientsByDept.reduce((sum, dept) => sum + dept.count, 0);
+
   const stats = [
     { label: 'Active Staff', value: activeStaff, icon: Users, color: 'text-primary', bg: 'bg-primary/10', link: '/users' },
     { label: 'Pending Tasks', value: pendingTasks, icon: ClipboardList, color: 'text-warning', bg: 'bg-warning/10', link: '/tasks' },
@@ -73,7 +83,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Activity */}
+        {/* Recent Activity - TOP PRIORITY per TODO */}
         <Card className="lg:col-span-2">
           <CardContent className="p-6">
             <h3 className="font-display text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
@@ -116,7 +126,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Department & Task Overview */}
+      {/* Department & Task Overview - Side by side per TODO */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardContent className="p-6">
@@ -166,6 +176,72 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* THICKER VIVID PIE CHART WITH COLORS */}
+      <Card className="max-w-sm mx-auto">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-foreground">Patients by Department</h3>
+              <p className="text-sm text-muted-foreground">Hospital patient distribution</p>
+            </div>
+            <Link to="/patients">
+              <Button variant="ghost" size="sm" className="h-8 px-3">
+                View Patients
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex flex-col items-center space-y-3">
+            {/* ULTRA THICK VIVID DONUT - strokeWidth 28 */}
+            <div className="relative w-36 h-36">
+              {/* Subtle shadows */}
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-300/20 rounded-full blur-sm" />
+              
+              <svg viewBox="0 0 160 160" className="w-full h-full absolute inset-0">
+                {/* Background */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="hsl(var(--card))" strokeWidth="14" />
+                
+                {/* Pediatrics 30/110 = 98° - VIVID ORANGE */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="#f97316" strokeWidth="28" strokeLinecap="round" 
+                  strokeDasharray="98 360" strokeDashoffset="-5" pathLength="1" className="drop-shadow-sm" />
+                
+                {/* Emergency 15/110 = 49° - VIVID PINK */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="#ec4899" strokeWidth="28" strokeLinecap="round" 
+                  strokeDasharray="49 360" strokeDashoffset="-103" pathLength="1" className="drop-shadow-sm" />
+                
+                {/* Cardiology 25/110 = 82° - VIVID GREEN */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="#10b981" strokeWidth="28" strokeLinecap="round" 
+                  strokeDasharray="82 360" strokeDashoffset="-152" pathLength="1" className="drop-shadow-sm" />
+                
+                {/* Orthopedics 18/110 = 59° - VIVID BLUE */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="#3b82f6" strokeWidth="28" strokeLinecap="round" 
+                  strokeDasharray="59 360" strokeDashoffset="-234" pathLength="1" className="drop-shadow-sm" />
+                
+                {/* Neurology 22/110 = 72° - VIVID PURPLE */}
+                <circle cx="80" cy="80" r="65" fill="none" stroke="#8b5cf6" strokeWidth="28" strokeLinecap="round" 
+                  strokeDasharray="72 360" strokeDashoffset="-293" pathLength="1" className="drop-shadow-sm" />
+              </svg>
+              
+              {/* CLEAN CENTER NUMBER */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-3xl font-bold text-foreground drop-shadow-lg">{totalPatients}</div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Patients</div>
+              </div>
+            </div>
+
+            {/* CENTERED LEGEND */}
+            <div className="flex flex-wrap justify-center gap-4 px-2 text-sm">
+              {patientsByDept.map((dept, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full shadow" style={{ backgroundColor: dept.color }} />
+                  <span className="font-medium text-foreground whitespace-nowrap">{dept.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
