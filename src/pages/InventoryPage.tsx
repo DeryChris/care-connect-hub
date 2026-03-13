@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Plus, Search, Edit, Trash2, Package, AlertTriangle, TrendingUp, Clock, ArrowDownToLine, ArrowUpFromLine, Settings2 } from 'lucide-react';
 import { mockInventory } from '@/lib/mock-data';
 import { INVENTORY_CATEGORIES, InventoryItem } from '@/lib/constants';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const InventoryPage = () => {
   const [items, setItems] = useState<InventoryItem[]>(mockInventory);
@@ -20,6 +21,7 @@ const InventoryPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [txDialog, setTxDialog] = useState<{ item: InventoryItem; type: 'in' | 'out' | 'adjustment' } | null>(null);
   const [txQty, setTxQty] = useState('');
+  const { formatCurrency } = useSettings();
 
   const filtered = useMemo(() => {
     return items.filter(i => {
@@ -43,7 +45,7 @@ const InventoryPage = () => {
   const stats = [
     { label: 'Total Items', value: totalItems, icon: Package, color: 'text-primary', bg: 'bg-primary/10' },
     { label: 'Low Stock', value: lowStockCount, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
-    { label: 'Total Value', value: `$${totalValue.toLocaleString()}`, icon: TrendingUp, color: 'text-success-foreground', bg: 'bg-success' },
+    { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900' },
     { label: 'Expiring (30d)', value: expiringCount, icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
   ];
 
@@ -160,7 +162,7 @@ const InventoryPage = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrency(item.unit_price)}</TableCell>
                     <TableCell className="text-muted-foreground">{item.supplier || '—'}</TableCell>
                     <TableCell className="text-muted-foreground">{item.expiry_date || '—'}</TableCell>
                     <TableCell className="text-right">

@@ -10,6 +10,7 @@ import { Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight } from 'lucide-reac
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
 import { DESIGNATIONS, User } from '@/lib/constants';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 
 const UsersPage = () => {
   const [users, setUsers] = useState<User[]>(mockUsers);
@@ -33,12 +34,24 @@ const UsersPage = () => {
   const totalPages = Math.ceil(filtered.length / perPage);
 
   const toggleStatus = (id: string) => {
+    const user = users.find(u => u.id === id);
     setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: !u.is_active } : u));
+    toast({
+      title: user?.is_active ? "User deactivated" : "User activated",
+      description: `${user?.name} has been ${user?.is_active ? 'deactivated' : 'activated'} successfully.`,
+      variant: "default",
+    });
   };
 
   const deleteUser = (id: string) => {
+    const user = users.find(u => u.id === id);
     setUsers(prev => prev.filter(u => u.id !== id));
     setDeleteDialog(null);
+    toast({
+      title: "User deleted",
+      description: `${user?.name} has been deleted successfully.`,
+      variant: "default",
+    });
   };
 
   const getDeptName = (id?: string) => id ? mockDepartments.find(d => d.id === id)?.name || '—' : '—';
