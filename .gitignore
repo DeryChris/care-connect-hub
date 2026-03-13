@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/img
+AI_PROMPT_HMIS.md
+TODO.md

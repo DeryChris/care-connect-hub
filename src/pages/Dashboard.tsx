@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import {
   Users, ClipboardList, Package, Building2,
-  CalendarDays, TrendingUp, AlertTriangle, Activity
+  CalendarDays, TrendingUp, AlertTriangle, Activity, Users as UsersIcon
 } from 'lucide-react';
 import { mockUsers, mockTasks, mockInventory, mockDepartments } from '@/lib/mock-data';
 
@@ -19,6 +19,16 @@ const Dashboard = () => {
   const totalInventoryValue = mockInventory.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
   const pendingTasks = mockTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
   const activeStaff = mockUsers.filter(u => u.is_active).length;
+
+  // Perfect donut proportions - THICK strokeWidth
+  const patientsByDept = [
+    { name: 'Cardiology', count: 25, color: '#10b981' },
+    { name: 'Orthopedics', count: 18, color: '#3b82f6' },
+    { name: 'Neurology', count: 22, color: '#8b5cf6' },
+    { name: 'Pediatrics', count: 30, color: '#f97316' },
+    { name: 'Emergency', count: 15, color: '#ec4899' },
+  ];
+  const totalPatients = patientsByDept.reduce((sum, dept) => sum + dept.count, 0);
 
   const stats = [
     { label: 'Active Staff', value: activeStaff, icon: Users, color: 'text-primary', bg: 'bg-primary/10', link: '/users' },
@@ -166,8 +176,82 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* THICK DONUT PIE CHART + CENTERED LEGEND */}
+      <Card className="max-w-md mx-auto">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-foreground">Patients by Department</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Hospital patient distribution</p>
+            </div>
+            <Link to="/patients">
+              <Button variant="ghost" size="sm" className="h-8 px-3">
+                View Patients
+              </Button>
+            </Link>
+          </div>
+
+          <div className="flex flex-col items-center space-y-4">
+            {/* THICK DONUT PIE CHART */}
+            <div className="relative">
+              {/* Shadows */}
+              <div className="absolute inset-0.5 bg-gradient-to-r from-slate-400/40 rounded-full blur" />
+              <div className="absolute inset-1 bg-slate-100/70 dark:bg-slate-900/70 rounded-full" />
+              
+              <svg viewBox="0 0 120 120" className="w-28 h-28 drop-shadow-2xl">
+                {/* Background ring */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#f1f5f9" strokeWidth="8" className="dark:stroke-slate-800" />
+                
+                {/* Pediatrics 30/110 = 27.27% of 360 = 98deg */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#f97316" strokeWidth="16" strokeLinecap="round" 
+                  strokeDasharray="98 360" strokeDashoffset="-10" pathLength="1" />
+                
+                {/* Emergency 15/110 = 13.64% = 49deg */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#ec4899" strokeWidth="16" strokeLinecap="round" 
+                  strokeDasharray="49 360" strokeDashoffset="-108" pathLength="1" />
+                
+                {/* Cardiology 25/110 = 22.73% = 82deg */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#10b981" strokeWidth="16" strokeLinecap="round" 
+                  strokeDasharray="82 360" strokeDashoffset="-157" pathLength="1" />
+                
+                {/* Orthopedics 18/110 = 16.36% = 59deg */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#3b82f6" strokeWidth="16" strokeLinecap="round" 
+                  strokeDasharray="59 360" strokeDashoffset="-239" pathLength="1" />
+                
+                {/* Neurology 22/110 = 20% = 72deg */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#8b5cf6" strokeWidth="16" strokeLinecap="round" 
+                  strokeDasharray="72 360" strokeDashoffset="-298" pathLength="1" transform="rotate(-90 60 60)" />
+              </svg>
+              
+              {/* Thick center ring */}
+              <div className="absolute inset-6 w-20 h-20 bg-gradient-to-br from-white/90 to-slate-50/90 dark:from-slate-900/90 dark:to-slate-800/90 rounded-2xl shadow-xl border-2 border-slate-200/60 dark:border-slate-700/60 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-xl font-bold text-foreground leading-tight">{totalPatients}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Patients</div>
+                </div>
+              </div>
+            </div>
+
+            {/* CENTERED LEGEND IN ONE LINE - Wraps perfectly */}
+            <div className="w-full flex flex-wrap justify-center gap-x-8 gap-y-1 px-2 text-sm items-center">
+              {patientsByDept.map((dept) => (
+                <div key={dept.name} className="flex items-center gap-1.5 min-w-max">
+                  <div 
+                    className="w-2.5 h-2.5 rounded-full shadow"
+                    style={{ backgroundColor: dept.color }}
+                  />
+                  <span className="font-medium text-foreground whitespace-nowrap">{dept.name}</span>
+                  <span className="font-mono text-sm font-bold text-foreground ml-1.5">{dept.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
 
 export default Dashboard;
+
