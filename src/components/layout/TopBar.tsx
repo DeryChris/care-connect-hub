@@ -4,6 +4,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { LogOut, Bell, Clock, Sun, Moon } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import GlobalSearch from '@/components/GlobalSearch';
 import { useEffect, useState } from 'react';
 
 const routeTitles: Record<string, string> = {
@@ -53,8 +54,9 @@ export function TopBar() {
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card px-4 shadow-sm">
       <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
 
-      <div className="flex-1">
-        <h2 className="font-display text-lg font-semibold text-foreground">{pageTitle}</h2>
+      <div className="flex-1 flex items-center gap-3">
+        <h2 className="font-display text-lg font-semibold text-foreground flex-1">{pageTitle}</h2>
+        <GlobalSearch />
       </div>
 
       <div className="flex items-center gap-3">

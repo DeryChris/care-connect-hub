@@ -21,6 +21,7 @@ import TaskForm from "./pages/TaskForm";
 import InventoryPage from "./pages/InventoryPage";
 import InventoryForm from "./pages/InventoryForm";
 import NotFound from "./pages/NotFound";
+import KnowledgeBase from "./pages/KnowledgeBase";
 
 const queryClient = new QueryClient();
 
@@ -58,9 +59,11 @@ const App = () => (
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/inventory/create" element={<InventoryForm />} />
               <Route path="/inventory/:id/edit" element={<InventoryForm />} />
+              <Route path="/knowledge" element={<KnowledgeBase />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

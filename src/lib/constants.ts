@@ -346,7 +346,24 @@ export interface RadiologyRequest {
   created_at: string;
 }
 
+export interface KnowledgeArticle {
+  id: string;
+  title: string;
+  category: 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
+  tags: string[];
+  content: string;
+  author_id: string;
+  author_name: string;
+  status: 'draft' | 'review' | 'approved' | 'archived';
+  version: number;
+  created_at: string;
+  updated_at: string;
+  views: number;
+  department_id?: string;
+}
+
 // Billing Types
+
 export type BillingStatus = 'pending' | 'paid' | 'partial' | 'cancelled' | 'refunded';
 export type BillingType = 'consultation' | 'laboratory' | 'radiology' | 'pharmacy' | 'ipd' | 'procedure' | 'other';
 
