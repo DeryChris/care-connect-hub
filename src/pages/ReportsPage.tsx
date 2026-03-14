@@ -102,20 +102,49 @@ const ReportsPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Completed</span>
-                <Badge className="bg-success">{completedTasks}</Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Pending/In Progress</span>
-                <Badge className="bg-warning">{pendingTasks}</Badge>
-              </div>
-              <div className="flex justify-between pt-4 border-t">
-                <span className="font-medium">Completion Rate</span>
-                <span className="font-bold">
+            <div className="relative">
+              {/* Donut Chart Container */}
+              <svg viewBox="0 0 120 120" className="w-32 h-32 mx-auto">
+                {/* Background Ring */}
+                <circle
+                  cx="60" cy="60" r="52"
+                  fill="none" stroke="#e5e7eb" strokeWidth="8"
+                />
+                {/* Completed (Green - 40%) */}
+                <circle
+                  cx="60" cy="60" r="52"
+                  fill="none" stroke="#10b981" strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray="206.26 259.08"
+                  pathLength="0.4"
+                  transform="rotate(-90 60 60)"
+                />
+                {/* Pending/In Progress (Yellow - 60%) */}
+                <circle
+                  cx="60" cy="60" r="52"
+                  fill="none" stroke="#f59e0b" strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray="155.45 309.89"
+                  pathLength="0.6"
+                  transform="rotate(-90 60 60)"
+                />
+              </svg>
+              {/* Center Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="text-2xl font-bold text-foreground">
                   {mockTasks.length > 0 ? Math.round((completedTasks / mockTasks.length) * 100) : 0}%
-                </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Completed</div>
+              </div>
+            </div>
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-success rounded-full"></div>
+                <span className="text-sm text-muted-foreground">Completed</span>
+                <span className="ml-auto font-medium">{completedTasks}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 bg-warning rounded-full"></div>
+                <span className="text-sm text-muted-foreground">Pending/In Progress</span>
+                <span className="ml-auto font-medium">{pendingTasks}</span>
               </div>
             </div>
           </CardContent>

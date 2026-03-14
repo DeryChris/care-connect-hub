@@ -191,32 +191,66 @@ const Dashboard = () => {
             </Link>
           </div>
 
-          <div className="flex flex-col items-center space-y-4">
-            {/* Simplified pie chart */}
-            <div className="relative w-32 h-32">
-              <div className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-full shadow-lg border-4 border-card p-4">
-                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-foreground">{totalPatients}</div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Patients</div>
-                  </div>
+            <div className="flex flex-col items-center space-y-6">
+              {/* Dynamic Donut Chart */}
+              <div className="relative">
+                <svg viewBox="0 0 140 140" className="w-36 h-36">
+                  {/* Background Ring */}
+                  <circle
+                    cx="70" cy="70" r="60"
+                    fill="none" stroke="#f1f5f9" strokeWidth="12"
+                    strokeDasharray="377 377"
+                  />
+                  {/* Department segments - dynamic */}
+                  {patientsByDept.map((dept, index) => {
+                    const total = patientsByDept.reduce((sum, d) => sum + d.count, 0);
+                    const percent = total > 0 ? (dept.count / total) : 0;
+                    const startAngle = -90 + (index * 72); // 360/5 = 72 degrees per segment
+                    return (
+                      <circle
+                        key={dept.name}
+                        cx="70" cy="70" r="60"
+                        fill="none" 
+                        stroke={dept.color} 
+                        strokeWidth="12" 
+                        strokeLinecap="round"
+                        strokeDasharray={`${377 * percent} ${377}`}
+                        transform={`rotate(${startAngle} 70 70)`}
+                        className="transition-all duration-500"
+                      />
+                    );
+                  })}
+                </svg>
+                {/* Center Text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-foreground">{totalPatients}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Patients</div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col space-y-2 w-full max-w-xs">
-              {patientsByDept.map((dept) => (
-                <div key={dept.name} className="flex items-center gap-3">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: dept.color }}
-                  />
-                  <span className="flex-1 font-medium text-foreground">{dept.name}</span>
-                  <span className="font-mono text-sm font-bold text-foreground">{dept.count}</span>
-                </div>
-              ))}
+              {/* Legend */}
+              <div className="flex flex-col space-y-2 w-full max-w-xs">
+                {patientsByDept.map((dept) => {
+                  const total = patientsByDept.reduce((sum, d) => sum + d.count, 0);
+                  const percent = total > 0 ? Math.round((dept.count / total) * 100) : 0;
+                  return (
+                    <div key={dept.name} className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dept.color }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground truncate">{dept.name}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-bold text-sm">{dept.count}</span>
+                        <span className="text-xs text-muted-foreground">({percent}%)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
         </CardContent>
       </Card>
     </div>
