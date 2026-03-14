@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import {
   Users, ClipboardList, Package, Building2,
-  CalendarDays, TrendingUp, AlertTriangle, Activity, Users as UsersIcon
+  CalendarDays, TrendingUp, AlertTriangle, Activity
 } from 'lucide-react';
 import { mockUsers, mockTasks, mockInventory, mockDepartments } from '@/lib/mock-data';
 
@@ -20,11 +20,6 @@ const Dashboard = () => {
   const pendingTasks = mockTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
   const activeStaff = mockUsers.filter(u => u.is_active).length;
 
-<<<<<<< Updated upstream
-  // Perfect donut proportions - THICKER strokeWidth with VIVID colors
-=======
-  // EXACT pie chart data matching reference image (25+18+22+30+15=110)
->>>>>>> Stashed changes
   const patientsByDept = [
     { name: 'Cardiology', count: 25, color: '#10b981' },
     { name: 'Orthopedics', count: 18, color: '#3b82f6' },
@@ -87,7 +82,7 @@ const Dashboard = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Activity - TOP PRIORITY per TODO */}
+        {/* Recent Activity */}
         <Card className="lg:col-span-2">
           <CardContent className="p-6">
             <h3 className="font-display text-lg font-semibold text-foreground mb-4">Recent Activity</h3>
@@ -130,7 +125,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Department & Task Overview - Side by side per TODO */}
+      {/* Department & Task Overview */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardContent className="p-6">
@@ -181,23 +176,13 @@ const Dashboard = () => {
         </Card>
       </div>
 
-<<<<<<< Updated upstream
-      {/* THICKER VIVID PIE CHART WITH COLORS */}
-      <Card className="max-w-sm mx-auto">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-display text-lg font-semibold text-foreground">Patients by Department</h3>
-              <p className="text-sm text-muted-foreground">Hospital patient distribution</p>
-=======
-      {/* PERFECT PIE CHART MATCHING REFERENCE IMAGE */}
+      {/* Patients by Department Pie Chart */}
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-display text-lg font-semibold text-foreground">Patients by Department</h3>
               <p className="text-sm text-muted-foreground mt-0.5">Hospital patient distribution</p>
->>>>>>> Stashed changes
             </div>
             <Link to="/patients">
               <Button variant="ghost" size="sm" className="h-8 px-3">
@@ -206,104 +191,28 @@ const Dashboard = () => {
             </Link>
           </div>
 
-<<<<<<< Updated upstream
-          <div className="flex flex-col items-center space-y-3">
-            {/* ULTRA THICK VIVID DONUT - strokeWidth 28 */}
-            <div className="relative w-36 h-36">
-              {/* Subtle shadows */}
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-300/20 rounded-full blur-sm" />
-              
-              <svg viewBox="0 0 160 160" className="w-full h-full absolute inset-0">
-                {/* Background */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="hsl(var(--card))" strokeWidth="14" />
-                
-                {/* Pediatrics 30/110 = 98° - VIVID ORANGE */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#f97316" strokeWidth="28" strokeLinecap="round" 
-                  strokeDasharray="98 360" strokeDashoffset="-5" pathLength="1" className="drop-shadow-sm" />
-                
-                {/* Emergency 15/110 = 49° - VIVID PINK */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#ec4899" strokeWidth="28" strokeLinecap="round" 
-                  strokeDasharray="49 360" strokeDashoffset="-103" pathLength="1" className="drop-shadow-sm" />
-                
-                {/* Cardiology 25/110 = 82° - VIVID GREEN */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#10b981" strokeWidth="28" strokeLinecap="round" 
-                  strokeDasharray="82 360" strokeDashoffset="-152" pathLength="1" className="drop-shadow-sm" />
-                
-                {/* Orthopedics 18/110 = 59° - VIVID BLUE */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#3b82f6" strokeWidth="28" strokeLinecap="round" 
-                  strokeDasharray="59 360" strokeDashoffset="-234" pathLength="1" className="drop-shadow-sm" />
-                
-                {/* Neurology 22/110 = 72° - VIVID PURPLE */}
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#8b5cf6" strokeWidth="28" strokeLinecap="round" 
-                  strokeDasharray="72 360" strokeDashoffset="-293" pathLength="1" className="drop-shadow-sm" />
-              </svg>
-              
-              {/* CLEAN CENTER NUMBER */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="text-3xl font-bold text-foreground drop-shadow-lg">{totalPatients}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">Patients</div>
-              </div>
-            </div>
-
-            {/* CENTERED LEGEND */}
-            <div className="flex flex-wrap justify-center gap-4 px-2 text-sm">
-              {patientsByDept.map((dept, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full shadow" style={{ backgroundColor: dept.color }} />
-                  <span className="font-medium text-foreground whitespace-nowrap">{dept.name}</span>
-=======
-          {/* Container for perfect centering */}
           <div className="flex flex-col items-center space-y-4">
-            {/* Reference image pie chart - EXACT replica */}
-            <div className="relative flex-shrink-0">
-              {/* Multi-shadow effect */}
-              <div className="absolute inset-0.5 bg-gradient-to-r from-slate-400/30 via-slate-200/50 rounded-full blur-sm" />
-              <div className="absolute inset-1 bg-slate-100/80 dark:bg-slate-900/80 rounded-full shadow-inner" />
-              
-              {/* Main pie ring */}
-              <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-slate-50/90 to-slate-100/90 dark:from-slate-800/90 dark:to-slate-700/90 shadow-xl border border-slate-200/50 dark:border-slate-700/50">
-                {/* Conic gradient slices - EXACT math */}
-                <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full rounded-2xl">
-                  {/* Pediatrics 30/110 = 27.27% of 360 = 98.18deg */}
-                  <path fill="#f97316" d="M50 5 A45 45 0 0 1 94.6 27.5 L50 25 Z" className="drop-shadow-sm" />
-                  
-                  {/* Emergency 15/110 = 13.64% = 49.1deg */}
-                  <path fill="#ec4899" d="M94.6 27.5 A45 45 0 0 0 94.6 27.5 L84 47 Z" className="drop-shadow-sm" />
-                  
-                  {/* Cardiology 25/110 = 22.73% = 81.8deg */}
-                  <path fill="#10b981" d="M84 47 A45 45 0 0 1 50 82 L48 60 Z" className="drop-shadow-sm" />
-                  
-                  {/* Orthopedics 18/110 = 16.36% = 58.9deg */}
-                  <path fill="#3b82f6" d="M50 82 A45 45 0 0 0 16 65 L35 50 Z" className="drop-shadow-sm" />
-                  
-                  {/* Neurology 22/110 = 20% = 72deg */}
-                  <path fill="#8b5cf6" d="M16 65 A45 45 0 0 1 16 65 L5 50 Z" className="drop-shadow-sm" />
-                  
-                  {/* Center */}
-                  <circle cx="50" cy="50" r="25" fill="currentColor" className="text-card dark:text-card-foreground shadow-lg font-bold" />
-                </svg>
-                
-                {/* Center text overlay */}
-                <div className="absolute inset-0 flex items-center justify-center">
+            {/* Simplified pie chart */}
+            <div className="relative w-32 h-32">
+              <div className="w-full h-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-full shadow-lg border-4 border-card p-4">
+                <div className="w-full h-full bg-card rounded-full flex items-center justify-center">
                   <div className="text-center">
-                    <div className="text-xl font-bold text-foreground leading-tight">{totalPatients}</div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">Patients</div>
+                    <div className="text-2xl font-bold text-foreground">{totalPatients}</div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Patients</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* SIMPLE TEXT LEGEND - Exactly like reference image */}
-            <div className="flex flex-col space-y-1.5 w-full max-w-xs mx-auto px-2">
+            <div className="flex flex-col space-y-2 w-full max-w-xs">
               {patientsByDept.map((dept) => (
-                <div key={dept.name} className="flex items-center gap-2 justify-start text-sm leading-4">
+                <div key={dept.name} className="flex items-center gap-3">
                   <div 
-                    className="w-2 h-2 rounded-full shrink-0 mt-0.5 shadow-sm"
+                    className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: dept.color }}
                   />
-                  <span className="font-medium text-foreground pr-4 min-w-0 flex-1">{dept.name}</span>
-                  <span className="font-mono text-sm font-bold text-foreground shrink-0 tabular-nums">{dept.count}</span>
->>>>>>> Stashed changes
+                  <span className="flex-1 font-medium text-foreground">{dept.name}</span>
+                  <span className="font-mono text-sm font-bold text-foreground">{dept.count}</span>
                 </div>
               ))}
             </div>

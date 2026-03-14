@@ -9,35 +9,35 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Search, Edit, Trash2, Pill, AlertTriangle, Package, DollarSign } from 'lucide-react';
 import { mockPharmacyItems } from '@/lib/mock-data';
-import { PharmacyItem, PHARMACY_CATEGORIES } from '@/lib/constants';
-import { useSettings } from '@/contexts/SettingsContext';
+import { PharmacyItem } from '@/lib/constants';
 
 const PharmacyPage = () => {
-  const [items, setItems] = useState<PharmacyItem[]>(mockPharmacyItems);
+  const [items, setItems] = useState(mockPharmacyItems);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
-  const { formatCurrency } = useSettings();
+  const [page, setPage] = useState(1);
+  const perPage = 10;
 
   const filtered = useMemo(() => {
     return items.filter(item => {
       const matchSearch = !search || 
         item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.generic_name?.toLowerCase().includes(search.toLowerCase()) ||
         item.barcode.includes(search);
       const matchCategory = categoryFilter === 'all' || item.category === categoryFilter;
-      
       let matchStock = true;
       if (stockFilter === 'low') {
         matchStock = item.quantity <= item.min_quantity;
       } else if (stockFilter === 'in_stock') {
         matchStock = item.quantity > item.min_quantity;
       }
-      
       return matchSearch && matchCategory && matchStock;
     });
   }, [items, search, categoryFilter, stockFilter]);
+
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.ceil(filtered.length / perPage);
 
   const deleteItem = (id: string) => {
     setItems(prev => prev.filter(i => i.id !== id));
@@ -52,31 +52,28 @@ const PharmacyPage = () => {
 
   const totalValue = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
   const lowStockCount = items.filter(i => i.quantity <= i.min_quantity).length;
-  const expiringCount = items.filter(i => {
-    if (!i.expiry_date) return false;
-    const expiryDate = new Date(i.expiry_date);
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    return expiryDate <= thirtyDaysFromNow;
-  }).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
         <div>
           <h1 className="page-title">Pharmacy</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} items in pharmacy</p>
+          <p className="text-sm text-muted-foreground">{filtered.length} items found</p>
         </div>
-        <Link to="/pharmacy/create">
-          <Button><Plus className="h-4 w-4 mr-2" />Add Medicine</Button>
-        </Link>
+        <Button asChild>
+          <Link to="/pharmacy/create">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Medicine
+          </Link>
+        </Button>
       </div>
 
-      <div className="filter-bar">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input 
-            placeholder="Search by name, generic name, or barcode..." 
+            placeholder="Search by name or barcode..." 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
             className="pl-10" 
@@ -88,9 +85,9 @@ const PharmacyPage = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {PHARMACY_CATEGORIES.map(cat => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
+            <SelectItem value="Medicine">Medicine</SelectItem>
+            <SelectItem value="Injection">Injection</SelectItem>
+            <SelectItem value="Consumable">Consumable</SelectItem>
           </SelectContent>
         </Select>
         <Select value={stockFilter} onValueChange={setStockFilter}>
@@ -106,71 +103,63 @@ const PharmacyPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Pill className="h-5 w-5 text-primary" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Pill className="h-8 w-8 text-primary mr-3" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Items</p>
-                <p className="text-xl font-bold">{items.length}</p>
+                <p className="text-2xl font-bold">{items.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <AlertTriangle className="h-8 w-8 text-warning mr-3" />
               <div>
                 <p className="text-sm text-muted-foreground">Low Stock</p>
-                <p className="text-xl font-bold">{lowStockCount}</p>
+                <p className="text-2xl font-bold">{lowStockCount}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-                <Package className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Expiring Soon</p>
-                <p className="text-xl font-bold">{expiringCount}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900">
-                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <DollarSign className="h-8 w-8 text-success mr-3" />
               <div>
                 <p className="text-sm text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">{formatCurrency(totalValue)}</p>
+                <p className="text-2xl font-bold">${totalValue.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Package className="h-8 w-8 text-primary mr-3" />
+              <div>
+                <p className="text-sm text-muted-foreground">Active Items</p>
+                <p className="text-2xl font-bold">{items.filter(i => i.is_active).length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary/5">
-                <TableHead>Medicine</TableHead>
+              <TableRow>
+                <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Dosage</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Unit Price</TableHead>
+                <TableHead>Price</TableHead>
                 <TableHead>Expiry</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
@@ -178,25 +167,18 @@ const PharmacyPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(item => {
+              {paginated.map(item => {
                 const stockStatus = getStockStatus(item);
-                const isExpiring = item.expiry_date && new Date(item.expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        {item.generic_name && (
-                          <p className="text-xs text-muted-foreground">{item.generic_name}</p>
-                        )}
+                        <p className="text-xs text-muted-foreground">{item.barcode}</p>
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{item.category}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{item.dosage || '—'}</span>
                     </TableCell>
                     <TableCell>
                       <div>
@@ -204,34 +186,29 @@ const PharmacyPage = () => {
                         <p className="text-xs text-muted-foreground">Min: {item.min_quantity}</p>
                       </div>
                     </TableCell>
+                    <TableCell>${item.unit_price.toFixed(2)}</TableCell>
                     <TableCell>
-                      <span>{formatCurrency(item.unit_price)}</span>
+                      {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '—'}
                     </TableCell>
-                    <TableCell>
-                      {item.expiry_date ? (
-                        <span className={isExpiring ? 'text-destructive font-medium' : ''}>
-                          {item.expiry_date}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">{item.location}</span>
-                    </TableCell>
+                    <TableCell className="text-sm">{item.location}</TableCell>
                     <TableCell>
                       <Badge className={stockStatus.color}>
                         {stockStatus.label}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link to={`/pharmacy/${item.id}/edit`}>
-                          <Button variant="ghost" size="icon">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link to={`/pharmacy/${item.id}/edit`}>
                             <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteDialog(item.id)} className="hover:text-destructive">
+                          </Link>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setDeleteDialog(item.id)}
+                          className="hover:text-destructive"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -239,10 +216,10 @@ const PharmacyPage = () => {
                   </TableRow>
                 );
               })}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    No pharmacy items found.
+                  <TableCell colSpan={8} className="h-24 text-center">
+                    No items match your filters.
                   </TableCell>
                 </TableRow>
               )}
@@ -251,17 +228,47 @@ const PharmacyPage = () => {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="px-3 py-1 text-sm text-muted-foreground bg-card rounded-md">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
       <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Medicine</DialogTitle>
+            <DialogTitle>Delete Item</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this medicine from pharmacy? This action cannot be undone.
+              This action cannot be undone. Are you sure?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteDialog && deleteItem(deleteDialog)}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => deleteDialog && deleteItem(deleteDialog)}>
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

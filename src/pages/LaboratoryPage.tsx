@@ -2,293 +2,215 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { Plus, Search, Edit, Trash2, TestTube, FileText, Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Dialog as ShadDialog, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Search, Edit, Trash2, FlaskConical, User, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { mockLaboratoryTests, mockPatients, mockUsers } from '@/lib/mock-data';
-import { LaboratoryTest, LabTestStatus } from '@/lib/constants';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-warning/10 text-warning',
-  sample_collected: 'bg-info/10 text-info',
-  processing: 'bg-primary/10 text-primary',
-  completed: 'bg-success text-success-foreground',
-  cancelled: 'bg-muted text-muted-foreground',
-};
+interface LabTest {
+  id: string;
+  patient_name: string;
+  test_name: string;
+  sample_collected: string;
+  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  result_date: string | null;
+  doctor_ordered: string;
+  notes: string;
+}
 
-const resultColors: Record<string, string> = {
-  normal: 'text-success',
-  abnormal: 'text-warning',
-  critical: 'text-destructive',
-};
+const mockLabTests: LabTest[] = [
+  { id: '1', patient_name: 'John Doe', test_name: 'Complete Blood Count', sample_collected: '2024-12-10', status: 'processing', result_date: null, doctor_ordered: 'Dr. Sarah Wilson', notes: 'Urgent' },
+  { id: '2', patient_name: 'Jane Smith', test_name: 'Lipid Profile', sample_collected: '2024-12-09', status: 'completed', result_date: '2024-12-10', doctor_ordered: 'Dr. James Chen', notes: '' },
+  { id: '3', patient_name: 'Mike Johnson', test_name: 'Liver Function Test', sample_collected: '2024-12-10', status: 'pending', result_date: null, doctor_ordered: 'Dr. Sarah Wilson', notes: 'Fasting sample' },
+  { id: '4', patient_name: 'Sarah Brown', test_name: 'Urine Analysis', sample_collected: '2024-12-08', status: 'completed', result_date: '2024-12-09', doctor_ordered: 'Dr. James Chen', notes: 'Routine' },
+  { id: '5', patient_name: 'Tom Wilson', test_name: 'Blood Glucose', sample_collected: '2024-12-10', status: 'processing', result_date: null, doctor_ordered: 'Dr. Sarah Wilson', notes: 'Random' },
+  { id: '6', patient_name: 'Lisa Davis', test_name: 'Thyroid Profile', sample_collected: '2024-12-11', status: 'pending', result_date: null, doctor_ordered: 'Dr. James Chen', notes: 'Fasting 8hrs' },
+  { id: '7', patient_name: 'Robert Lee', test_name: 'Renal Function Test', sample_collected: '2024-12-10', status: 'processing', result_date: null, doctor_ordered: 'Dr. Sarah Wilson', notes: '' },
+  { id: '8', patient_name: 'Emily Garcia', test_name: 'ESR & CRP', sample_collected: '2024-12-09', status: 'completed', result_date: '2024-12-10', doctor_ordered: 'Dr. James Chen', notes: 'Inflammation markers' },
+];
 
 const LaboratoryPage = () => {
-  const [tests, setTests] = useState<LaboratoryTest[]>(mockLaboratoryTests);
+  const [tests, setTests] = useState(mockLabTests);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
-  const [resultDialog, setResultDialog] = useState<LaboratoryTest | null>(null);
-  const [resultForm, setResultForm] = useState({
-    result: '',
-    result_value: '',
-    result_unit: '',
-    reference_range: '',
-    result_status: 'normal' as 'normal' | 'abnormal' | 'critical',
-  });
+  const [page, setPage] = useState(1);
+  const perPage = 10;
 
   const filtered = useMemo(() => {
     return tests.filter(t => {
       const matchSearch = !search || 
         t.patient_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.test_name.toLowerCase().includes(search.toLowerCase()) ||
-        t.test_code.toLowerCase().includes(search.toLowerCase());
+        t.test_name.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'all' || t.status === statusFilter;
-      const matchCategory = categoryFilter === 'all' || t.category === categoryFilter;
-      return matchSearch && matchStatus && matchCategory;
+      return matchSearch && matchStatus;
     });
-  }, [tests, search, statusFilter, categoryFilter]);
+  }, [tests, search, statusFilter]);
 
-  const updateStatus = (id: string, status: LabTestStatus) => {
-    setTests(prev => prev.map(t => t.id === id ? { 
-      ...t, 
-      status,
-      collected_at: status === 'sample_collected' ? new Date().toISOString().slice(0, 16).replace('T', ' ') : t.collected_at,
-      completed_at: status === 'completed' ? new Date().toISOString().slice(0, 16).replace('T', ' ') : t.completed_at
-    } : t));
-  };
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const totalPages = Math.ceil(filtered.length / perPage);
 
   const deleteTest = (id: string) => {
     setTests(prev => prev.filter(t => t.id !== id));
     setDeleteDialog(null);
   };
 
-  const saveResult = () => {
-    if (!resultDialog) return;
-    setTests(prev => prev.map(t => t.id === resultDialog.id ? {
-      ...t,
-      result: resultForm.result,
-      result_value: resultForm.result_value,
-      result_unit: resultForm.result_unit,
-      reference_range: resultForm.reference_range,
-      result_status: resultForm.result_status,
-      status: 'completed' as LabTestStatus,
-      completed_at: new Date().toISOString().slice(0, 16).replace('T', ' ')
-    } : t));
-    setResultDialog(null);
-    setResultForm({ result: '', result_value: '', result_unit: '', reference_range: '', result_status: 'normal' });
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline">Pending</Badge>;
+      case 'processing':
+        return <Badge className="bg-primary text-primary-foreground">Processing</Badge>;
+      case 'completed':
+        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
   };
-
-  const categories = [...new Set(tests.map(t => t.category))];
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
         <div>
           <h1 className="page-title">Laboratory</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} lab tests</p>
+          <p className="text-sm text-muted-foreground">{filtered.length} tests found</p>
         </div>
-        <Link to="/laboratory/create">
-          <Button><Plus className="h-4 w-4 mr-2" />New Test Order</Button>
-        </Link>
-      </div>
-
-      <div className="filter-bar">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input 
-            placeholder="Search patient, test, or code..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-            className="pl-10" 
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="sample_collected">Sample Collected</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(cat => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          New Test Order
+        </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-                <Clock className="h-5 w-5 text-warning" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TestTube className="h-8 w-8 text-primary mr-3" />
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-xl font-bold">{tests.filter(t => t.status === 'pending').length}</p>
+                <p className="text-sm text-muted-foreground">Total Tests</p>
+                <p className="text-2xl font-bold">{tests.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-info/10">
-                <FlaskConical className="h-5 w-5 text-info" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Processing</p>
-                <p className="text-xl font-bold">{tests.filter(t => t.status === 'processing' || t.status === 'sample_collected').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-                <CheckCircle className="h-5 w-5 text-success" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-success mr-3" />
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-xl font-bold">{tests.filter(t => t.status === 'completed').length}</p>
+                <p className="text-2xl font-bold">{tests.filter(t => t.status === 'completed').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Clock className="h-8 w-8 text-primary mr-3" />
               <div>
-                <p className="text-sm text-muted-foreground">Abnormal</p>
-                <p className="text-xl font-bold">{tests.filter(t => t.result_status === 'abnormal' || t.result_status === 'critical').length}</p>
+                <p className="text-sm text-muted-foreground">Processing</p>
+                <p className="text-2xl font-bold">{tests.filter(t => t.status === 'processing').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TestTube className="h-8 w-8 text-primary mr-3" />
+              <div>
+                <p className="text-sm text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold">{tests.filter(t => t.status === 'pending').length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="relative flex-1 min-w-[250px]">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input 
+                placeholder="Search patient or test name..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lab Tests Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary/5">
-                <TableHead>Test</TableHead>
+              <TableRow>
                 <TableHead>Patient</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Ordered By</TableHead>
-                <TableHead>Collected</TableHead>
-                <TableHead>Result</TableHead>
+                <TableHead>Test</TableHead>
+                <TableHead>Sample Collected</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Doctor</TableHead>
+                <TableHead>Notes</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(test => (
+              {paginated.map(test => (
                 <TableRow key={test.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{test.test_name}</p>
-                      <p className="text-xs text-muted-foreground">{test.test_code}</p>
-                    </div>
+                  <TableCell className="font-medium">{test.patient_name}</TableCell>
+                  <TableCell className="font-medium">{test.test_name}</TableCell>
+                  <TableCell className="text-sm">
+                    {new Date(test.sample_collected).toLocaleDateString()}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span>{test.patient_name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{test.category}</Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{test.ordered_by_name}</TableCell>
-                  <TableCell>
-                    {test.collected_at ? (
-                      <span className="text-sm">{test.collected_at}</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {test.status === 'completed' && test.result_value ? (
-                      <div>
-                        <p className={`font-medium ${resultColors[test.result_status || 'normal']}`}>
-                          {test.result_value} {test.result_unit}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Ref: {test.reference_range}</p>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Select value={test.status} onValueChange={(v) => updateStatus(test.id, v as LabTestStatus)}>
-                      <SelectTrigger className="h-7 w-[140px] text-xs">
-                        <Badge className={statusColors[test.status]}>{test.status.replace('_', ' ')}</Badge>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="sample_collected">Sample Collected</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <TableCell>{getStatusBadge(test.status)}</TableCell>
+                  <TableCell className="font-medium">{test.doctor_ordered}</TableCell>
+                  <TableCell className="text-sm max-w-[200px] truncate">
+                    {test.notes || '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {test.status !== 'completed' && test.status !== 'cancelled' && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => {
-                            setResultForm({
-                              result: test.result || '',
-                              result_value: test.result_value || '',
-                              result_unit: test.result_unit || '',
-                              reference_range: test.reference_range || '',
-                              result_status: test.result_status || 'normal',
-                            });
-                            setResultDialog(test);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteDialog(test.id)} className="hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
+                    <div className="flex gap-1 justify-end">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:text-destructive"
+                        onClick={() => setDeleteDialog(test.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
+              {paginated.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No lab tests found.
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    No lab tests match the selected filters.
                   </TableCell>
                 </TableRow>
               )}
@@ -297,81 +219,47 @@ const LaboratoryPage = () => {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            Previous
+          </Button>
+          <span className="px-3 py-1 text-sm text-muted-foreground bg-card rounded-md">
+            Page {page} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+
       {/* Delete Dialog */}
       <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Lab Test</DialogTitle>
+            <DialogTitle>Cancel Lab Test</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this lab test order?
+              This will cancel the lab test order. Are you sure?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteDialog && deleteTest(deleteDialog)}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Result Entry Dialog */}
-      <Dialog open={!!resultDialog} onOpenChange={() => setResultDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Enter Test Result</DialogTitle>
-            <DialogDescription>
-              {resultDialog?.test_name} - {resultDialog?.patient_name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>Result Value</Label>
-              <Input 
-                value={resultForm.result_value} 
-                onChange={(e) => setResultForm(prev => ({ ...prev, result_value: e.target.value }))}
-                placeholder="e.g. 14.5"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Unit</Label>
-              <Input 
-                value={resultForm.result_unit} 
-                onChange={(e) => setResultForm(prev => ({ ...prev, result_unit: e.target.value }))}
-                placeholder="e.g. g/dL"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Reference Range</Label>
-              <Input 
-                value={resultForm.reference_range} 
-                onChange={(e) => setResultForm(prev => ({ ...prev, reference_range: e.target.value }))}
-                placeholder="e.g. 12.0-17.5"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Result Status</Label>
-              <Select value={resultForm.result_status} onValueChange={(v) => setResultForm(prev => ({ ...prev, result_status: v as typeof resultForm.result_status }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="normal">Normal</SelectItem>
-                  <SelectItem value="abnormal">Abnormal</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea 
-                value={resultForm.result} 
-                onChange={(e) => setResultForm(prev => ({ ...prev, result: e.target.value }))}
-                placeholder="Additional notes..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setResultDialog(null)}>Cancel</Button>
-            <Button onClick={saveResult}>Save Result</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => deleteDialog && deleteTest(deleteDialog)}>
+              Cancel Test
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
