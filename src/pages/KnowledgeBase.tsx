@@ -11,11 +11,9 @@ import { Search, BookOpen, FileText, Tag, Eye } from 'lucide-react';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { KnowledgeArticle } from '@/lib/constants';
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
-import { useAuth } from '@/contexts/AuthContext';
 
 const KnowledgeBase = () => {
-  const { userHasPermission } = useAuth();
-  const [articles, setArticles] = useState(mockKnowledgeArticles.filter(a => a.status === 'approved'));
+  const [articles, setArticles] = useState(mockKnowledgeArticles);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -72,14 +70,12 @@ const KnowledgeBase = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {userHasPermission('author') && (
-            <Link to="/knowledge/create">
-              <Button>
-                <BookOpen className="h-4 w-4 mr-2" />
-                New Article
-              </Button>
-            </Link>
-          )}
+          <Link to="/knowledge/create">
+            <Button>
+              <BookOpen className="h-4 w-4 mr-2" />
+              New Article
+            </Button>
+          </Link>
         </div>
       </div>
 

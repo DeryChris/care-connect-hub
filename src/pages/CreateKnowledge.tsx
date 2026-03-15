@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mockDepartments } from '@/lib/mock-data';
 
 type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
-type ArticleStatus = 'draft' | 'pending_approval' | 'approved' | 'rejected';
+type ArticleStatus = 'draft' | 'review';
 type ViewMode = 'edit' | 'preview' | 'split';
 
 const CATEGORIES: { value: ArticleCategory; label: string }[] = [
@@ -58,7 +58,7 @@ const CreateKnowledge = () => {
     }
   };
 
-  const handleSubmit = (status: 'pending_approval' | 'draft') => {
+  const handleSubmit = (status: ArticleStatus) => {
     if (!title.trim()) {
       toast({ title: 'Title required', description: 'Please enter an article title.', variant: 'destructive' });
       return;
@@ -70,29 +70,9 @@ const CreateKnowledge = () => {
 
     setSubmitting(true);
     setTimeout(() => {
-      // Here you would typically make an API call
-      // For now, we just show a toast
-      const newArticle = {
-        id: String(Date.now()),
-        title,
-        category,
-        content,
-        tags,
-        department_id: departmentId || undefined,
-        author_id: user!.id,
-        author_name: user!.name,
-        status,
-        version: 1,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        views: 0,
-      };
-
-      console.log('New Article:', newArticle);
-
       toast({
-        title: status === 'pending_approval' ? 'Submitted for review' : 'Draft saved',
-        description: status === 'pending_approval'
+        title: status === 'review' ? 'Submitted for review' : 'Draft saved',
+        description: status === 'review'
           ? 'Your article has been submitted and is pending approval.'
           : 'Article saved as draft.',
       });
@@ -125,7 +105,7 @@ const CreateKnowledge = () => {
           <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={submitting}>
             <Save className="h-4 w-4 mr-2" /> Save Draft
           </Button>
-          <Button onClick={() => handleSubmit('pending_approval')} disabled={submitting}>
+          <Button onClick={() => handleSubmit('review')} disabled={submitting}>
             <Send className="h-4 w-4 mr-2" /> Submit for Review
           </Button>
         </div>

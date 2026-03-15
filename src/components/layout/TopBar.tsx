@@ -30,6 +30,10 @@ const routeTitles: Record<string, string> = {
   '/ipd': 'IPD',
   '/radiology': 'Radiology',
   '/billing': 'Billing',
+  '/knowledge': 'Knowledge Base',
+  '/knowledge/create': 'New Article',
+  '/wiki': 'Internal Wiki',
+  '/documents': 'Document Management',
 };
 
 export function TopBar() {
@@ -52,7 +56,7 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-border bg-card px-4 shadow-sm">
-      <SidebarTrigger className="text-muted-foreground hover:text-foreground -ml-2 p-2 rounded-md hover:bg-muted" />
+      <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
 
       <div className="flex-1 flex items-center gap-3">
         <h2 className="font-display text-lg font-semibold text-foreground flex-1">{pageTitle}</h2>
@@ -102,3 +106,4 @@ export function TopBar() {
     </header>
   );
 }
+

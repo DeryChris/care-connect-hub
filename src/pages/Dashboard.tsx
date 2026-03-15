@@ -204,9 +204,8 @@ const Dashboard = () => {
                   {/* Department segments - dynamic */}
                   {patientsByDept.map((dept, index) => {
                     const total = patientsByDept.reduce((sum, d) => sum + d.count, 0);
-                    const prevCount = patientsByDept.slice(0, index).reduce((sum, d) => sum + d.count, 0);
                     const percent = total > 0 ? (dept.count / total) : 0;
-                    const startAngle = -90 + (prevCount / total * 360);
+                    const startAngle = -90 + (index * 72); // 360/5 = 72 degrees per segment
                     return (
                       <circle
                         key={dept.name}
@@ -259,3 +258,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

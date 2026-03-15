@@ -23,16 +23,19 @@ import InventoryForm from "./pages/InventoryForm";
 import DocumentsPage from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import KnowledgeArticlePage from "./pages/KnowledgeArticle";
+import CreateKnowledge from "./pages/CreateKnowledge";
+import Wiki from "./pages/Wiki";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -61,17 +64,20 @@ const App = () => (
               <Route path="/inventory/create" element={<InventoryForm />} />
               <Route path="/inventory/:id/edit" element={<InventoryForm />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />
+              <Route path="/knowledge/create" element={<CreateKnowledge />} />
+              <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
+              <Route path="/wiki" element={<Wiki />} />
               <Route path="/documents" element={<DocumentsPage />} />
-              <Route path="/approvals" element={<ApprovalsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
 
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
 export default App;
+

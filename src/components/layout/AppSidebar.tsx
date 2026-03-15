@@ -1,28 +1,16 @@
 import {
   LayoutDashboard, Users, Building2, ClipboardList, Package,
   UserCog, CalendarDays, Stethoscope, FlaskConical, Scan,
-  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText
+  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText, PenLine
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   useSidebar,
-  LayoutDashboard,
-  Users,
-  Calendar,
-  FlaskConical,
-  Pill,
-  FileText,
-  Settings,
-  Building,
-  ClipboardList,
-  Boxes,
-  Book,
-  File,
-  BadgeCheck,
-  GitPullRequest,
-} from "lucide-react";
+} from '@/components/ui/sidebar';
 
 const mainNav = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
@@ -50,6 +38,7 @@ const managementNav = [
   { title: 'Inventory', url: '/inventory', icon: Package },
   { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen },
+  { title: 'Wiki', url: '/wiki', icon: PenLine },
 ];
 
 const adminNav = [
@@ -67,42 +56,64 @@ interface NavItem {
 const NavGroup = ({ label, items, collapsed }: { label: string; items: NavItem[]; collapsed: boolean }) => {
   const location = useLocation();
   return (
-    <div className="px-3 py-2">
-      {!isCollapsed && <h2 className="mb-2 px-4 text-sm font-semibold tracking-tight text-muted-foreground/80 uppercase">{title}</h2>}
-      <div className="space-y-1">
-        {visibleLinks.map(link => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            title={isCollapsed ? link.label : undefined}
-            className={({ isActive }) =>
-              `flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted transition-colors ${
-                isCollapsed ? 'justify-center' : ''
-              } ${
-                isActive ? 'bg-muted text-primary font-semibold' : 'text-muted-foreground'
-              }`
-            }
-          >
-            <link.icon className={`h-5 w-5 shrink-0 ${!isCollapsed ? 'mr-3' : ''}`} />
-            <span className={isCollapsed ? 'sr-only' : 'grow'}>{link.label}</span>
-          </NavLink>
-        ))}
-      </div>
-    </div>
+    <SidebarGroup>
+      <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
+        {label}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {items.map((item) => {
+            const isActive = location.pathname === item.url || location.pathname.startsWith(item.url.split('?')[0] + '/');
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink
+                    to={item.url}
+                    end={item.url === '/dashboard'}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent/50 ${
+                      item.placeholder ? 'opacity-50 cursor-not-allowed' : ''
+                    } ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground'}`}
+                    activeClassName=""
+                    onClick={item.placeholder ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span>{item.title}</span>}
+                    {!collapsed && item.placeholder && (
+                      <span className="ml-auto text-[10px] rounded bg-sidebar-accent px-1.5 py-0.5">Soon</span>
+                    )}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
   );
 };
 
-export const AppSidebar = () => {
-  const { isCollapsed } = useSidebar();
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+  const { isAdmin } = useAuth();
+
   return (
-    <aside className={`h-full border-r bg-background transition-all duration-200 ${isCollapsed ? 'w-20' : 'w-64'}`}>
-      <div className="flex h-16 items-center border-b px-6 justify-center">
-        <h1 className={`text-lg font-bold whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>CareConnect</h1>
-        {isCollapsed && <BadgeCheck className="h-6 w-6 text-primary" />}
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
+          <Heart className="h-4 w-4 text-sidebar-primary-foreground" />
+        </div>
+        {!collapsed && (
+          <span className="font-display text-lg font-bold text-sidebar-foreground">HMIS</span>
+        )}
       </div>
-      <nav className="flex-1 space-y-2 py-4">
-        {navLinks.map(group => <NavGroup key={group.title} title={group.title} links={group.links} isCollapsed={isCollapsed} />)}
-      </nav>
-    </aside>
+      <SidebarContent className="px-2 py-2">
+        <NavGroup label="Main" items={mainNav} collapsed={collapsed} />
+        <NavGroup label="Clinical" items={clinicalNav} collapsed={collapsed} />
+        <NavGroup label="Support" items={supportNav} collapsed={collapsed} />
+        <NavGroup label="Management" items={managementNav} collapsed={collapsed} />
+        {isAdmin && <NavGroup label="Admin" items={adminNav} collapsed={collapsed} />}
+      </SidebarContent>
+    </Sidebar>
   );
-};
+}
