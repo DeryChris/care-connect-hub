@@ -26,6 +26,8 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import KnowledgeArticlePage from "./pages/KnowledgeArticle";
 import CreateKnowledge from "./pages/CreateKnowledge";
 import Wiki from "./pages/Wiki";
+import DocumentForm from "./pages/DocumentForm";
+import EditKnowledge from "./pages/EditKnowledge";
 
 const queryClient = new QueryClient();
 
