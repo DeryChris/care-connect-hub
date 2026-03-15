@@ -68,8 +68,11 @@ const App = () => (
               <Route path="/knowledge" element={<KnowledgeBase />} />
               <Route path="/knowledge/create" element={<CreateKnowledge />} />
               <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
+              <Route path="/knowledge/:id/edit" element={<EditKnowledge />} />
               <Route path="/wiki" element={<Wiki />} />
               <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents/create" element={<DocumentForm />} />
+              <Route path="/documents/:id/edit" element={<DocumentForm />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
