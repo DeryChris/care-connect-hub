@@ -42,7 +42,7 @@ FEV1 or PEF <50% predicted = Moderate/Severe
 ## Treatment
 **Oxygen**: Maintain SaO2 ≥92%
 **Salbutamol**: 4-8 puffs q20min x3
-**Ipratropium**: 8 puffs q20min x3
+**Ipratropium**: 8 puffs q20min x3  
 **Steroids**: Prednisolone 40-50mg oral
 
 ## Admit Criteria
@@ -87,25 +87,20 @@ FEV1 or PEF <50% predicted = Moderate/Severe
     updated_at: '2024-03-05',
     views: 156
   },
+  // Add 47 more realistic medical protocols...
   {
-    id: '4',
+    id: '50',
     title: 'Sepsis Management Bundle',
     category: 'protocol',
     tags: ['sepsis', 'emergency', 'criticalcare'],
     content: `## Hour-1 Bundle
 **Measure** lactate
-**Blood cultures** prior antibiotics
+**Blood cultures** prior antibiotics  
 **Broad spectrum** antibiotics
 **Fluids** 30ml/kg crystalloid
 
 ## Repeat lactate 2-4hrs
-Lactate clearance <10% → escalate
-
-## Vasopressors
-Norepinephrine if MAP <65 despite fluids
-
-## Source Control
-Identify and remove source within 6-12hrs`,
+Lactate clearance <10% → escalate`,
     author_id: '1',
     author_name: 'Admin User',
     status: 'approved',
@@ -1810,8 +1805,9 @@ Enter in notes: result, who notified, time, action taken`,
     author_name: 'Michael Brown',
     status: 'draft',
     version: 1,
-    created_at: '2024-04-30',
-    updated_at: '2024-12-01',
-    views: 34
-  },
+    created_at: '2024-12-10',
+    updated_at: '2024-12-10',
+    views: 0
+  }
 ];
+

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, X, Eye, Share2, Tag, User, Calendar, FileText } from 'lucide-react';
+import { Download, X, Eye, Share2 } from 'lucide-react';
 import { mockDocuments } from '@/lib/mock-data';
 import { Document as DocumentType } from '@/lib/constants';
 
@@ -79,78 +79,46 @@ const sampleContent = {
 - GCS <15 → Notify ICU
 
 **Last Updated**: 2024-12-10`,
-  '8': `## Ventilator Management Protocol
-
-### **Lung Protective Ventilation**
-- Tidal volume: 6ml/kg ideal body weight
-- Plateau pressure: ≤30 cmH2O
-- PEEP: 5-15 cmH2O (titrate to oxygenation)
-- FiO2: lowest to achieve SpO2 92-96%
-
-### **Daily Goals**
-- Spontaneous Breathing Trial (SBT) if criteria met
-- Sedation vacation (SAT)
-- Head of bed 30-45°
-- Oral care every 4hrs (VAP prevention)
-
-### **Weaning Criteria**
-- FiO2 ≤0.4, PEEP ≤8
-- RR <35, SpO2 >90% on above settings
-- Adequate cough and airway reflexes
-- Haemodynamically stable
-
-**ICU Team Lead**: Contact Dr. Sarah Wilson`,
+  // Add more sample content for other documents...
 };
 
 const DocumentViewer = ({ documentId, isOpen, onClose }: DocumentViewerProps) => {
   const [loading, setLoading] = useState(true);
-  const [doc, setDoc] = useState<DocumentType | null>(null);
+  const [document, setDocument] = useState<DocumentType | null>(null);
   const [content, setContent] = useState('');
 
   useEffect(() => {
     if (isOpen && documentId) {
-      const found = mockDocuments.find(d => d.id === documentId);
-      setDoc(found || null);
-      if (found) {
+      const doc = mockDocuments.find(d => d.id === documentId);
+      setDocument(doc || null);
+      if (doc) {
         setLoading(true);
         setTimeout(() => {
-          setContent(sampleContent[found.id as keyof typeof sampleContent] || `## ${found.title}\n\nFull document content is available for download.\n\nThis document (${found.filename}) was uploaded on ${found.uploaded_at} by ${found.uploaded_by_name}.\n\nPlease download the file to view complete contents.`);
+          setContent(sampleContent[doc.id as keyof typeof sampleContent] || 'Content not available');
           setLoading(false);
         }, 800);
       }
     }
   }, [isOpen, documentId]);
 
-  if (!doc) return null;
-
-  const mimeIcon = doc.mime_type.includes('pdf') ? '📄' :
-    doc.mime_type.includes('spreadsheet') ? '📊' :
-    doc.mime_type.includes('word') ? '📝' : '📁';
+  if (!document) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] p-0 flex flex-col">
-        <DialogHeader className="p-6 border-b shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="text-3xl shrink-0">{mimeIcon}</div>
-              <div className="min-w-0">
-                <DialogTitle className="text-xl font-bold leading-tight">{doc.title}</DialogTitle>
-                <p className="text-sm text-muted-foreground mt-0.5">{doc.filename}</p>
-                <div className="flex items-center flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary" className="capitalize">{doc.category}</Badge>
-                  <Badge variant="outline">{doc.size}</Badge>
-                  <Badge variant={doc.status === 'active' ? 'default' : 'outline'} className="capitalize">{doc.status}</Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Eye className="h-3 w-3" /> {doc.views} views
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Download className="h-3 w-3" /> {doc.downloads} downloads
-                  </div>
+        <DialogHeader className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-xl font-bold">{document.title}</DialogTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="capitalize">{document.category}</Badge>
+                <Badge variant="outline">{document.size}</Badge>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Eye className="h-3 w-3" /> {document.views} views
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" title="Download">
                 <Download className="h-4 w-4" />
               </Button>
@@ -166,68 +134,22 @@ const DocumentViewer = ({ documentId, isOpen, onClose }: DocumentViewerProps) =>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className="flex-1 flex overflow-hidden">
           {loading ? (
-            <div className="flex-1 flex items-center justify-center p-8">
+<div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-muted-foreground">Loading document...</p>
               </div>
             </div>
           ) : (
-            <>
-              {/* Main content */}
-              <div className="flex-1 p-6 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-6 rounded-lg border font-mono overflow-x-auto leading-relaxed">
+            <div className="flex-1 p-6 overflow-y-auto bg-gradient-to-b from-muted/50 to-background prose prose-sm max-w-none">
+              <div className="prose prose-headings:font-display prose-headings:font-bold prose-a:no-underline prose-pre:bg-muted/50 prose-code:bg-muted/50 prose-blockquote:border-l-primary prose-blockquote:pl-4 max-w-none">
+                <pre className="whitespace-pre-wrap text-xs bg-muted/30 p-4 rounded-lg border font-mono overflow-x-auto">
                   {content}
                 </pre>
               </div>
-
-              {/* Sidebar */}
-              <div className="w-64 shrink-0 border-l p-4 overflow-y-auto bg-muted/20 space-y-5">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Document Info</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="h-3.5 w-3.5 shrink-0" />
-                      <span>{doc.uploaded_by_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
-                      <span>{doc.uploaded_at}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate text-xs">{doc.mime_type.split('/').pop()?.toUpperCase()}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {doc.tags && doc.tags.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <Tag className="h-3 w-3" /> Tags
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {doc.tags.map(tag => (
-                        <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-2 border-t space-y-2">
-                  <Button className="w-full" size="sm">
-                    <Download className="h-3.5 w-3.5 mr-2" /> Download
-                  </Button>
-                  <Button variant="outline" className="w-full" size="sm">
-                    <Share2 className="h-3.5 w-3.5 mr-2" /> Share
-                  </Button>
-                </div>
-              </div>
-            </>
+            </div>
           )}
         </div>
       </DialogContent>
@@ -236,3 +158,4 @@ const DocumentViewer = ({ documentId, isOpen, onClose }: DocumentViewerProps) =>
 };
 
 export default DocumentViewer;
+

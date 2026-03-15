@@ -26,7 +26,6 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import KnowledgeArticlePage from "./pages/KnowledgeArticle";
 import CreateKnowledge from "./pages/CreateKnowledge";
 import Wiki from "./pages/Wiki";
-import ApprovalsPage from "./pages/ApprovalsPage";
 
 const queryClient = new QueryClient();
 
@@ -65,9 +64,6 @@ const App = () => (
               <Route path="/inventory/create" element={<InventoryForm />} />
               <Route path="/inventory/:id/edit" element={<InventoryForm />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />
-              <Route path="/knowledge/create" element={<CreateKnowledge />} />
-              <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
-              <Route path="/wiki" element={<Wiki />} />
               <Route path="/documents" element={<DocumentsPage />} />
               <Route path="/approvals" element={<ApprovalsPage />} />
             </Route>

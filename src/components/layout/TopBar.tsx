@@ -30,10 +30,6 @@ const routeTitles: Record<string, string> = {
   '/ipd': 'IPD',
   '/radiology': 'Radiology',
   '/billing': 'Billing',
-  '/knowledge': 'Knowledge Base',
-  '/knowledge/create': 'New Article',
-  '/wiki': 'Internal Wiki',
-  '/documents': 'Document Management',
 };
 
 export function TopBar() {
