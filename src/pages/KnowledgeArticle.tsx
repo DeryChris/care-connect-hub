@@ -94,12 +94,28 @@ const KnowledgeArticlePage = () => {
                   </div>
                   <h1 className="text-2xl font-bold font-display">{article.title}</h1>
                 </div>
-                {(isAdmin || author?.id === '1') && (
-                  <Link to={`/knowledge/${article.id}/edit`}>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
-                    </Button>
-                  </Link>
+                {perms?.update && (
+                  <div className="flex gap-2">
+                    <Link to={`/knowledge/${article.id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
+                      </Button>
+                    </Link>
+                    {transitions.includes('approved') && artStatus === 'review' && (
+                      <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
+                        toast({ title: 'Article approved', description: 'Published to Knowledge Base.' });
+                      }}>
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve
+                      </Button>
+                    )}
+                    {transitions.includes('rejected') && artStatus === 'review' && (
+                      <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => {
+                        toast({ title: 'Article rejected', description: 'Sent back for revision.' });
+                      }}>
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
 
