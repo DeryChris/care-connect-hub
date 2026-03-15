@@ -26,16 +26,17 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import KnowledgeArticlePage from "./pages/KnowledgeArticle";
 import CreateKnowledge from "./pages/CreateKnowledge";
 import Wiki from "./pages/Wiki";
+import ApprovalsPage from "./pages/ApprovalsPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -68,16 +69,16 @@ const App = () => (
               <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
               <Route path="/wiki" element={<Wiki />} />
               <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/approvals" element={<ApprovalsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
 
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
 export default App;
-

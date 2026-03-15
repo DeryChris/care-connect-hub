@@ -1,54 +1,52 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { User } from '@/lib/constants';
 import { mockUsers } from '@/lib/mock-data';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  userHasPermission: (permission: string) => boolean;
+  login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
+  isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('hmis_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const isAuthenticated = !!user;
 
-  const login = useCallback(async (email: string, _password: string) => {
-    // Mock auth — accept any password for demo
-    const found = mockUsers.find(u => u.email === email);
-    if (found && found.is_active) {
-      setUser(found);
-      localStorage.setItem('hmis_user', JSON.stringify(found));
+  const userHasPermission = useCallback((permission: string): boolean => {
+    if (!user) return false;
+    if (permission.startsWith('role:')) return user.role === permission.substring(5);
+    if (permission.startsWith('designation:')) return user.designation === permission.substring(12);
+    return user.permissions?.includes(permission) ?? false;
+  }, [user]);
+
+  const login = async (email: string, password?: string): Promise<boolean> => {
+    // This is a mock login. In a real app, you'd validate credentials.
+    const foundUser = mockUsers.find(u => u.email === email);
+    if (foundUser && foundUser.is_active) {
+      setUser(foundUser);
       return true;
     }
-    return false;
-  }, []);
-
-  const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem('hmis_user');
-  }, []);
+    return false;
+  };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isAdmin: user?.role === 'admin',
-      login,
-      logout,
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const logout = () => setUser(null);
+  const isAdmin = user?.role === 'admin';
+
+  const value = { user, isAuthenticated, login, logout, userHasPermission, isAdmin };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

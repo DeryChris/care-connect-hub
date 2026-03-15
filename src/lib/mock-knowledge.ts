@@ -885,11 +885,12 @@ Decreases hepatic glucose production; increases insulin sensitivity
 5. Escalation plan`,
     author_id: '3',
     author_name: 'Dr. James Chen',
-    status: 'review',
+    status: 'pending_approval',
     version: 1,
     created_at: '2024-04-15',
     updated_at: '2024-12-01',
-    views: 98
+    views: 98,
+    reviewer_id: '1',
   },
   {
     id: '29',
@@ -1177,11 +1178,12 @@ Insulin, anticoagulants, opioids, digoxin, lithium, methotrexate, immunosuppress
 Full incident report; arrange surgical review if severe`,
     author_id: '3',
     author_name: 'Dr. James Chen',
-    status: 'review',
+    status: 'draft',
     version: 1,
     created_at: '2024-04-25',
     updated_at: '2024-11-25',
-    views: 67
+    views: 67,
+    notes: 'Awaiting updated guidelines from oncology pharmacy before submission.',
   },
   {
     id: '38',

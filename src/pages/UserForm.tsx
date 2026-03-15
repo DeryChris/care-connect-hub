@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Save } from 'lucide-react';
-import { DESIGNATIONS, MODULES } from '@/lib/constants';
+import { DESIGNATIONS, MODULES, KNOWLEDGE_MODULES } from '@/lib/constants';
 import { mockDepartments } from '@/lib/mock-data';
 
 const UserForm = () => {
@@ -110,6 +110,24 @@ const UserForm = () => {
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
               {MODULES.map(mod => (
+                <div key={mod.key} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`perm-${mod.key}`}
+                    checked={permissions.includes(mod.key)}
+                    onCheckedChange={() => togglePermission(mod.key)}
+                  />
+                  <Label htmlFor={`perm-${mod.key}`} className="text-sm">{mod.label}</Label>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Knowledge Permissions</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+              {KNOWLEDGE_MODULES.map(mod => (
                 <div key={mod.key} className="flex items-center gap-2">
                   <Checkbox
                     id={`perm-${mod.key}`}

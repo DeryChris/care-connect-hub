@@ -1,119 +1,106 @@
+import { NavLink } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
-  LayoutDashboard, Users, Building2, ClipboardList, Package,
-  UserCog, CalendarDays, Stethoscope, FlaskConical, Scan,
-  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText, PenLine
-} from 'lucide-react';
-import { NavLink } from '@/components/NavLink';
-import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   useSidebar,
-} from '@/components/ui/sidebar';
+  LayoutDashboard,
+  Users,
+  Calendar,
+  FlaskConical,
+  Pill,
+  FileText,
+  Settings,
+  Building,
+  ClipboardList,
+  Boxes,
+  Book,
+  File,
+  BadgeCheck,
+  GitPullRequest,
+} from "lucide-react";
 
-const mainNav = [
-  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+const navLinks = [
+  {
+    title: "Main",
+    links: [
+      { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/patients", label: "Patients", icon: Users, permissions: ["role:admin", "designation:doctor", "designation:nurse", "designation:receptionist"] },
+      { to: "/appointments", label: "Appointments", icon: Calendar, permissions: ["role:admin", "designation:doctor", "designation:receptionist"] },
+    ],
+  },
+  {
+    title: "Clinical",
+    links: [
+        { to: "/laboratory", label: "Laboratory", icon: FlaskConical, permissions: ["designation:lab_technician", "role:admin"] },
+        { to: "/pharmacy", label: "Pharmacy", icon: Pill, permissions: ["designation:pharmacist", "role:admin"] },
+    ],
+  },
+  {
+    title: "Management",
+    links: [
+      { to: "/departments", label: "Departments", icon: Building, permissions: ["role:admin"] },
+      { to: "/users", label: "Staff", icon: Users, permissions: ["role:admin"] },
+      { to: "/inventory", label: "Inventory", icon: Boxes, permissions: ["role:admin", "designation:pharmacist"] },
+      { to: "/tasks", label: "Tasks", icon: ClipboardList },
+      { to: "/reports", label: "Reports", icon: FileText, permissions: ["role:admin"] },
+      { to: "/approvals", label: "Approvals", icon: BadgeCheck, permissions: ["role:admin", "designation:doctor"] },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { to: "/documents", label: "Documents", icon: File },
+      { to: "/knowledge", label: "Knowledge Base", icon: Book },
+      { to: "/wiki", label: "Wiki", icon: GitPullRequest },
+    ],
+  },
 ];
 
-const clinicalNav = [
-  { title: 'Patients', url: '/patients', icon: Heart },
-  { title: 'Appointments', url: '/appointments', icon: CalendarDays },
-  { title: 'OPD', url: '/opd', icon: Stethoscope },
-  { title: 'IPD', url: '/ipd', icon: BedDouble },
-  { title: 'Doctors & Staff', url: '/users?filter=doctor', icon: Users },
-  { title: 'Departments', url: '/departments', icon: Building2 },
-];
+const NavGroup = ({ title, links, isCollapsed }: { title: string; links: any[]; isCollapsed: boolean }) => {
+  const { userHasPermission } = useAuth();
 
-const supportNav = [
-  { title: 'Laboratory', url: '/laboratory', icon: FlaskConical },
-  { title: 'Radiology', url: '/radiology', icon: Scan },
-  { title: 'Pharmacy', url: '/pharmacy', icon: Pill },
-  { title: 'Billing', url: '/billing', icon: Receipt },
-  { title: 'Reports', url: '/reports', icon: BarChart3 },
-];
+  const visibleLinks = links.filter(link => 
+    !link.permissions || link.permissions.some(userHasPermission)
+  );
 
-const managementNav = [
-  { title: 'Task Management', url: '/tasks', icon: ClipboardList },
-  { title: 'Inventory', url: '/inventory', icon: Package },
-  { title: 'Documents', url: '/documents', icon: FileText },
-  { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen },
-  { title: 'Wiki', url: '/wiki', icon: PenLine },
-];
+  if (visibleLinks.length === 0) return null;
 
-const adminNav = [
-  { title: 'User Management', url: '/users', icon: UserCog },
-  { title: 'Settings', url: '/settings', icon: Settings },
-];
-
-interface NavItem {
-  title: string;
-  url: string;
-  icon: React.ComponentType<{ className?: string }>;
-  placeholder?: boolean;
-}
-
-const NavGroup = ({ label, items, collapsed }: { label: string; items: NavItem[]; collapsed: boolean }) => {
-  const location = useLocation();
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/60">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => {
-            const isActive = location.pathname === item.url || location.pathname.startsWith(item.url.split('?')[0] + '/');
-            return (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
-                  <NavLink
-                    to={item.url}
-                    end={item.url === '/dashboard'}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent/50 ${
-                      item.placeholder ? 'opacity-50 cursor-not-allowed' : ''
-                    } ${isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground font-medium shadow-sm' : 'text-sidebar-foreground'}`}
-                    activeClassName=""
-                    onClick={item.placeholder ? (e: React.MouseEvent) => e.preventDefault() : undefined}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span>{item.title}</span>}
-                    {!collapsed && item.placeholder && (
-                      <span className="ml-auto text-[10px] rounded bg-sidebar-accent px-1.5 py-0.5">Soon</span>
-                    )}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
+    <div className="px-3 py-2">
+      {!isCollapsed && <h2 className="mb-2 px-4 text-sm font-semibold tracking-tight text-muted-foreground/80 uppercase">{title}</h2>}
+      <div className="space-y-1">
+        {visibleLinks.map(link => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            title={isCollapsed ? link.label : undefined}
+            className={({ isActive }) =>
+              `flex items-center rounded-md px-3 py-2 text-sm font-medium hover:bg-muted transition-colors ${
+                isCollapsed ? 'justify-center' : ''
+              } ${
+                isActive ? 'bg-muted text-primary font-semibold' : 'text-muted-foreground'
+              }`
+            }
+          >
+            <link.icon className={`h-5 w-5 shrink-0 ${!isCollapsed ? 'mr-3' : ''}`} />
+            <span className={isCollapsed ? 'sr-only' : 'grow'}>{link.label}</span>
+          </NavLink>
+        ))}
+      </div>
+    </div>
   );
 };
 
-export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === 'collapsed';
-  const { isAdmin } = useAuth();
-
+export const AppSidebar = () => {
+  const { isCollapsed } = useSidebar();
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Heart className="h-4 w-4 text-sidebar-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <span className="font-display text-lg font-bold text-sidebar-foreground">HMIS</span>
-        )}
+    <aside className={`h-full border-r bg-background transition-all duration-200 ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <div className="flex h-16 items-center border-b px-6 justify-center">
+        <h1 className={`text-lg font-bold whitespace-nowrap transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>CareConnect</h1>
+        {isCollapsed && <BadgeCheck className="h-6 w-6 text-primary" />}
       </div>
-      <SidebarContent className="px-2 py-2">
-        <NavGroup label="Main" items={mainNav} collapsed={collapsed} />
-        <NavGroup label="Clinical" items={clinicalNav} collapsed={collapsed} />
-        <NavGroup label="Support" items={supportNav} collapsed={collapsed} />
-        <NavGroup label="Management" items={managementNav} collapsed={collapsed} />
-        {isAdmin && <NavGroup label="Admin" items={adminNav} collapsed={collapsed} />}
-      </SidebarContent>
-    </Sidebar>
+      <nav className="flex-1 space-y-2 py-4">
+        {navLinks.map(group => <NavGroup key={group.title} title={group.title} links={group.links} isCollapsed={isCollapsed} />)}
+      </nav>
+    </aside>
   );
-}
+};

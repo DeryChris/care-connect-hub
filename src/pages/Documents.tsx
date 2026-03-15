@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, FileText, Folder, Search, File, Download, Eye, Trash2 } from 'lucide-react';
 import { mockDocuments } from '@/lib/mock-data';
 import DocumentViewer from './DocumentViewer';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DocumentsPage = () => {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -17,14 +19,28 @@ const DocumentsPage = () => {
   const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
   const perPage = 10;
 
+  const isReviewer = user?.role === 'admin' || user?.designation === 'doctor';
+  const isAuthor = user?.role === 'admin' || user?.designation === 'doctor' || user?.designation === 'nurse';
+
   const filteredDocs = useMemo(() => {
     return mockDocuments.filter(doc => {
       const matchSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase()) || doc.filename.toLowerCase().includes(search.toLowerCase());
       const matchCategory = categoryFilter === 'all' || doc.category === categoryFilter;
-      const matchStatus = statusFilter === 'all' || doc.status === statusFilter;
+      
+      let matchStatus = false;
+      if (statusFilter === 'all') {
+        if (isReviewer) {
+          matchStatus = true;
+        } else {
+          matchStatus = doc.status === 'approved';
+        }
+      } else {
+        matchStatus = doc.status === statusFilter;
+      }
+
       return matchSearch && matchCategory && matchStatus;
     });
-  }, [search, categoryFilter, statusFilter]);
+  }, [search, categoryFilter, statusFilter, isReviewer]);
 
   const paginatedDocs = filteredDocs.slice((page - 1) * perPage, page * perPage);
   const totalPages = Math.ceil(filteredDocs.length / perPage);
@@ -45,10 +61,12 @@ const DocumentsPage = () => {
           <p className="text-sm text-muted-foreground">{filteredDocs.length} documents found</p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Button>
+          {isAuthor && (
+            <Button>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Document
+            </Button>
+          )}
           <Button variant="outline">
             <Folder className="h-4 w-4 mr-2" />
             New Folder
@@ -61,7 +79,7 @@ const DocumentsPage = () => {
         <CardContent className="p-6">
           <div className="filter-bar">
             <div className="relative flex-1 min-w-[250px]">
-<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
                 placeholder="Search documents by title or filename..."
                 value={search}
@@ -88,7 +106,10 @@ const DocumentsPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
@@ -186,7 +207,7 @@ const DocumentsPage = () => {
                   <TableCell className="text-sm text-muted-foreground">{doc.size}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{doc.uploaded_at}</TableCell>
                   <TableCell>
-                    <Badge variant={doc.status === 'active' ? "default" : "outline"}>
+                    <Badge variant={doc.status === 'approved' ? 'default' : doc.status === 'rejected' ? 'destructive' : doc.status === 'pending_approval' ? 'secondary' : 'outline'} className={doc.status === 'pending_approval' ? 'bg-warning text-warning-foreground' : ''}>
                       {doc.status}
                     </Badge>
                   </TableCell>
@@ -211,10 +232,12 @@ const DocumentsPage = () => {
                     <FileText className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" />
                     <h3 className="text-lg font-medium mb-1">No documents found</h3>
                     <p className="text-sm mb-4">Try adjusting your search or filters</p>
-                    <Button>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload first document
-                    </Button>
+                    {isAuthor && (
+                        <Button>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload first document
+                        </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               )}
@@ -260,4 +283,3 @@ const DocumentsPage = () => {
 };
 
 export default DocumentsPage;
-
