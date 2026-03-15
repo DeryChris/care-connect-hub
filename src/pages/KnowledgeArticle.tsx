@@ -3,10 +3,12 @@ import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Eye, Clock, User, Tag, BookOpen, Edit, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Eye, Clock, User, Tag, BookOpen, Edit, CheckCircle, XCircle } from 'lucide-react';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
 
 const statusColors: Record<string, string> = {
   approved: 'bg-success text-success-foreground',
