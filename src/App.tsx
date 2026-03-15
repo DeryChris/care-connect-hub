@@ -26,6 +26,8 @@ import KnowledgeBase from "./pages/KnowledgeBase";
 import KnowledgeArticlePage from "./pages/KnowledgeArticle";
 import CreateKnowledge from "./pages/CreateKnowledge";
 import Wiki from "./pages/Wiki";
+import DocumentForm from "./pages/DocumentForm";
+import EditKnowledge from "./pages/EditKnowledge";
 
 const queryClient = new QueryClient();
 
@@ -66,8 +68,11 @@ const App = () => (
               <Route path="/knowledge" element={<KnowledgeBase />} />
               <Route path="/knowledge/create" element={<CreateKnowledge />} />
               <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
+              <Route path="/knowledge/:id/edit" element={<EditKnowledge />} />
               <Route path="/wiki" element={<Wiki />} />
               <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents/create" element={<DocumentForm />} />
+              <Route path="/documents/:id/edit" element={<DocumentForm />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

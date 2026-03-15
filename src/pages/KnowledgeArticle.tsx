@@ -3,10 +3,12 @@ import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Eye, Clock, User, Tag, BookOpen, Edit, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Eye, Clock, User, Tag, BookOpen, Edit, CheckCircle, XCircle } from 'lucide-react';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
 
 const statusColors: Record<string, string> = {
   approved: 'bg-success text-success-foreground',
@@ -26,11 +28,17 @@ const categoryColors: Record<string, string> = {
 const KnowledgeArticlePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const article = mockKnowledgeArticles.find(a => a.id === id);
   const author = article ? mockUsers.find(u => u.id === article.author_id) : null;
   const department = article?.department_id ? mockDepartments.find(d => d.id === article.department_id) : null;
+  
+  const perms = article ? getContentPermissions(user, 'knowledge', article.author_id) : null;
+  const artStatus = (article?.status || 'draft') as DocumentStatus;
+  const transitions = article ? getAllowedStatusTransitions(user, artStatus, article.author_id) : [];
+
 
   // Related articles: same category, exclude current
   const related = article
@@ -83,12 +91,28 @@ const KnowledgeArticlePage = () => {
                   </div>
                   <h1 className="text-2xl font-bold font-display">{article.title}</h1>
                 </div>
-                {(isAdmin || author?.id === '1') && (
-                  <Link to={`/knowledge/${article.id}/edit`}>
-                    <Button variant="outline" size="sm">
-                      <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
-                    </Button>
-                  </Link>
+                {perms?.update && (
+                  <div className="flex gap-2">
+                    <Link to={`/knowledge/${article.id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
+                      </Button>
+                    </Link>
+                    {transitions.includes('approved') && artStatus === 'review' && (
+                      <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
+                        toast({ title: 'Article approved', description: 'Published to Knowledge Base.' });
+                      }}>
+                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve
+                      </Button>
+                    )}
+                    {transitions.includes('rejected') && artStatus === 'review' && (
+                      <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => {
+                        toast({ title: 'Article rejected', description: 'Sent back for revision.' });
+                      }}>
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
 
