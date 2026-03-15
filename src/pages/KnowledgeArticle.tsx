@@ -39,9 +39,6 @@ const KnowledgeArticlePage = () => {
   const artStatus = (article?.status || 'draft') as DocumentStatus;
   const transitions = article ? getAllowedStatusTransitions(user, artStatus, article.author_id) : [];
 
-  const article = mockKnowledgeArticles.find(a => a.id === id);
-  const author = article ? mockUsers.find(u => u.id === article.author_id) : null;
-  const department = article?.department_id ? mockDepartments.find(d => d.id === article.department_id) : null;
 
   // Related articles: same category, exclude current
   const related = article
