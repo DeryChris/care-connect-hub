@@ -28,7 +28,16 @@ const categoryColors: Record<string, string> = {
 const KnowledgeArticlePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const article = mockKnowledgeArticles.find(a => a.id === id);
+  const author = article ? mockUsers.find(u => u.id === article.author_id) : null;
+  const department = article?.department_id ? mockDepartments.find(d => d.id === article.department_id) : null;
+  
+  const perms = article ? getContentPermissions(user, 'knowledge', article.author_id) : null;
+  const artStatus = (article?.status || 'draft') as DocumentStatus;
+  const transitions = article ? getAllowedStatusTransitions(user, artStatus, article.author_id) : [];
 
   const article = mockKnowledgeArticles.find(a => a.id === id);
   const author = article ? mockUsers.find(u => u.id === article.author_id) : null;
