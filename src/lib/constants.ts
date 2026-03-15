@@ -394,3 +394,20 @@ export interface BillingItem {
   total: number;
 }
 
+export interface Document {
+  id: string;
+  title: string;
+  filename: string;
+  category: 'protocol' | 'guideline' | 'sop' | 'manual' | 'training' | 'report';
+  size: string;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_by_name: string;
+  status: 'active' | 'archived' | 'draft';
+  uploaded_at: string;
+  views: number;
+  downloads: number;
+  tags: string[];
+  department_id?: string;
+}
+

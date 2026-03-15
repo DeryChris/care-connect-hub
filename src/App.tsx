@@ -20,6 +20,7 @@ import TasksPage from "./pages/TasksPage";
 import TaskForm from "./pages/TaskForm";
 import InventoryPage from "./pages/InventoryPage";
 import InventoryForm from "./pages/InventoryForm";
+import DocumentsPage from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 import KnowledgeBase from "./pages/KnowledgeBase";
 
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/inventory/create" element={<InventoryForm />} />
               <Route path="/inventory/:id/edit" element={<InventoryForm />} />
               <Route path="/knowledge" element={<KnowledgeBase />} />
+              <Route path="/documents" element={<DocumentsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

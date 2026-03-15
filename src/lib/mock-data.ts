@@ -1,4 +1,4 @@
-import { User, Department, Task, InventoryItem, Patient, Appointment, LaboratoryTest, PharmacyItem, OPDVisit, IPDAdmission, RadiologyRequest, BillingInvoice } from './constants';
+import { User, Department, Task, InventoryItem, Patient, Appointment, LaboratoryTest, PharmacyItem, OPDVisit, IPDAdmission, RadiologyRequest, BillingInvoice, Document } from './constants';
 
 export const mockUsers: User[] = [
   { id: '1', name: 'Admin User', email: 'admin@hmis.com', role: 'admin', designation: 'admin_staff', phone: '+1234567890', is_active: true, permissions: [], created_at: '2024-01-15' },
@@ -39,7 +39,6 @@ export const mockInventory: InventoryItem[] = [
   { id: '8', name: 'Printer Paper A4', category: 'Stationery', unit: 'pack', quantity: 80, min_quantity: 20, unit_price: 4.0, supplier: 'OfficeMax', location: 'Office Store', barcode: 'STA008', notes: '500 sheets per pack', is_active: true, created_at: '2024-04-15' },
 ];
 
-// Patient mock data
 export const mockPatients: Patient[] = [
   { id: '1', name: 'John Smith', email: 'john.smith@email.com', phone: '+1234567890', date_of_birth: '1985-03-15', gender: 'male', blood_group: 'O+', address: '123 Main St, City', emergency_contact: 'Jane Smith', emergency_phone: '+1234567891', insurance_provider: 'HealthPlus', insurance_number: 'HP123456', is_active: true, created_at: '2024-01-10' },
   { id: '2', name: 'Emily Johnson', email: 'emily.j@email.com', phone: '+1234567892', date_of_birth: '1990-07-22', gender: 'female', blood_group: 'A+', address: '456 Oak Ave, City', emergency_contact: 'Mike Johnson', emergency_phone: '+1234567893', insurance_provider: 'MedCare', insurance_number: 'MC789012', is_active: true, created_at: '2024-02-15' },
@@ -49,7 +48,6 @@ export const mockPatients: Patient[] = [
   { id: '6', name: 'Jennifer Lee', email: 'jennifer.l@email.com', phone: '+1234567900', date_of_birth: '1988-02-28', gender: 'female', blood_group: 'A-', address: '987 Cedar Ln, City', emergency_contact: 'David Lee', emergency_phone: '+1234567901', insurance_provider: 'MedCare', insurance_number: 'MC901234', is_active: true, created_at: '2024-04-20' },
 ];
 
-// Appointment mock data
 export const mockAppointments: Appointment[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', department_id: '1', department_name: 'Cardiology', appointment_date: '2024-12-20', appointment_time: '09:00', type: 'consultation', status: 'confirmed', reason: 'Heart checkup', created_at: '2024-12-15' },
   { id: '2', patient_id: '2', patient_name: 'Emily Johnson', doctor_id: '3', doctor_name: 'Dr. James Chen', department_id: '2', department_name: 'Orthopedics', appointment_date: '2024-12-20', appointment_time: '10:30', type: 'followup', status: 'scheduled', reason: 'Follow-up on knee injury', created_at: '2024-12-16' },
@@ -59,7 +57,6 @@ export const mockAppointments: Appointment[] = [
   { id: '6', patient_id: '1', patient_name: 'John Smith', doctor_id: '3', doctor_name: 'Dr. James Chen', department_id: '2', department_name: 'Orthopedics', appointment_date: '2024-12-18', appointment_time: '09:30', type: 'followup', status: 'cancelled', reason: 'Knee follow-up', notes: 'Patient requested cancellation', created_at: '2024-12-10' },
 ];
 
-// Laboratory test mock data
 export const mockLaboratoryTests: LaboratoryTest[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', test_name: 'Complete Blood Count', test_code: 'CBC001', category: 'Hematology', status: 'completed', result: 'All values normal', result_value: '14.5', result_unit: 'g/dL', reference_range: '12.0-17.5', result_status: 'normal', ordered_by: '2', ordered_by_name: 'Dr. Sarah Wilson', collected_at: '2024-12-15 09:00', completed_at: '2024-12-15 14:00', created_at: '2024-12-15' },
   { id: '2', patient_id: '2', patient_name: 'Emily Johnson', test_name: 'Blood Glucose Test', test_code: 'GLU001', category: 'Biochemistry', status: 'completed', result: 'Elevated sugar level', result_value: '142', result_unit: 'mg/dL', reference_range: '70-100', result_status: 'abnormal', ordered_by: '3', ordered_by_name: 'Dr. James Chen', collected_at: '2024-12-16 10:00', completed_at: '2024-12-16 12:00', created_at: '2024-12-16' },
@@ -69,7 +66,6 @@ export const mockLaboratoryTests: LaboratoryTest[] = [
   { id: '6', patient_id: '1', patient_name: 'John Smith', test_name: 'Urinalysis', test_code: 'URI001', category: 'Pathology', status: 'completed', result: 'Normal', result_value: 'Normal', result_unit: '', reference_range: 'Normal', result_status: 'normal', ordered_by: '2', ordered_by_name: 'Dr. Sarah Wilson', collected_at: '2024-12-15 09:30', completed_at: '2024-12-15 15:00', created_at: '2024-12-15' },
 ];
 
-// Pharmacy mock data
 export const mockPharmacyItems: PharmacyItem[] = [
   { id: '1', name: 'Paracetamol 500mg', generic_name: 'Acetaminophen', category: 'Medicine', unit: 'strip', quantity: 500, min_quantity: 100, unit_price: 2.5, supplier: 'PharmaCorp', location: 'Shelf A1', expiry_date: '2025-06-30', barcode: 'PHA001', dosage: '500mg', notes: 'Pain reliever', is_active: true, created_at: '2024-01-15' },
   { id: '2', name: 'Amoxicillin 250mg', generic_name: 'Amoxicillin', category: 'Medicine', unit: 'bottle', quantity: 30, min_quantity: 40, unit_price: 12.0, supplier: 'PharmaCorp', location: 'Shelf A2', expiry_date: '2025-03-15', barcode: 'PHA002', dosage: '250mg', notes: 'Antibiotic', is_active: true, created_at: '2024-02-15' },
@@ -81,7 +77,6 @@ export const mockPharmacyItems: PharmacyItem[] = [
   { id: '8', name: 'Amoxicillin Injection', generic_name: 'Amoxicillin', category: 'Injection', unit: 'vial', quantity: 45, min_quantity: 20, unit_price: 15.0, supplier: 'MedSupply Co', location: 'Fridge F1', expiry_date: '2025-02-28', barcode: 'PHA008', dosage: '500mg', notes: 'IV/IM injection', is_active: true, created_at: '2024-05-10' },
 ];
 
-// OPD mock data
 export const mockOPDVisits: OPDVisit[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', patient_phone: '+1234567890', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', department_id: '1', department_name: 'Cardiology', visit_date: '2024-12-20', visit_time: '09:30', chief_complaint: 'Chest pain and shortness of breath', diagnosis: 'Mild angina', status: 'completed', vitals: { blood_pressure: '120/80', temperature: '36.8°C', pulse: '72 bpm', weight: '75 kg' }, notes: 'Follow up in 2 weeks', created_at: '2024-12-20' },
   { id: '2', patient_id: '2', patient_name: 'Emily Johnson', patient_phone: '+1234567892', doctor_id: '3', doctor_name: 'Dr. James Chen', department_id: '2', department_name: 'Orthopedics', visit_date: '2024-12-20', visit_time: '10:30', chief_complaint: 'Knee pain while walking', status: 'completed', vitals: { blood_pressure: '118/78', temperature: '36.5°C', pulse: '68 bpm', weight: '62 kg' }, diagnosis: 'Patellofemoral pain syndrome', created_at: '2024-12-20' },
@@ -90,7 +85,6 @@ export const mockOPDVisits: OPDVisit[] = [
   { id: '5', patient_id: '6', patient_name: 'Jennifer Lee', patient_phone: '+1234567900', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', department_id: '1', department_name: 'Cardiology', visit_date: '2024-12-21', visit_time: '15:30', chief_complaint: 'Dizziness and fatigue', status: 'waiting', created_at: '2024-12-21' },
 ];
 
-// IPD mock data
 export const mockIPDAdmissions: IPDAdmission[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', patient_phone: '+1234567890', patient_age: 39, patient_gender: 'male', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', department_id: '1', department_name: 'Cardiology', room_number: 'ICU-01', bed_number: 'Bed 1', admission_date: '2024-12-15', admission_time: '08:00', diagnosis: 'Acute myocardial infarction', treatment_plan: 'Cardiac monitoring, medication', status: 'in_progress', notes: 'Stable condition', created_at: '2024-12-15' },
   { id: '2', patient_id: '3', patient_name: 'Michael Brown', patient_phone: '+1234567894', patient_age: 46, patient_gender: 'male', doctor_id: '3', doctor_name: 'Dr. James Chen', department_id: '2', department_name: 'Orthopedics', room_number: 'WARD-A', bed_number: 'Bed 5', admission_date: '2024-12-18', admission_time: '14:30', diagnosis: 'Hip replacement surgery', treatment_plan: 'Post-operative care, physiotherapy', status: 'admitted', notes: 'Post-surgery Day 2', created_at: '2024-12-18' },
@@ -98,7 +92,6 @@ export const mockIPDAdmissions: IPDAdmission[] = [
   { id: '4', patient_id: '2', patient_name: 'Emily Johnson', patient_phone: '+1234567892', patient_age: 34, patient_gender: 'female', doctor_id: '3', doctor_name: 'Dr. James Chen', department_id: '2', department_name: 'Orthopedics', room_number: 'WARD-A', bed_number: 'Bed 2', admission_date: '2024-12-19', admission_time: '16:00', diagnosis: 'Fracture of tibia', treatment_plan: 'Surgery scheduled, pain management', status: 'admitted', notes: 'Awaiting surgery', created_at: '2024-12-19' },
 ];
 
-// Radiology mock data
 export const mockRadiologyRequests: RadiologyRequest[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', patient_age: 39, patient_gender: 'male', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', radiology_type: 'xray', examination: 'Chest X-Ray', clinical_history: 'Chest pain, shortness of breath', status: 'completed', appointment_date: '2024-12-16', appointment_time: '10:00', report: 'Available', findings: 'No acute cardiopulmonary abnormality. Heart size normal. Lungs are clear.', impression: 'Normal chest radiograph', completed_at: '2024-12-16 11:30', created_at: '2024-12-15' },
   { id: '2', patient_id: '2', patient_name: 'Emily Johnson', patient_age: 34, patient_gender: 'female', doctor_id: '3', doctor_name: 'Dr. James Chen', radiology_type: 'ultrasound', examination: 'Knee Ultrasound', clinical_history: 'Knee pain and swelling', status: 'scheduled', appointment_date: '2024-12-22', appointment_time: '09:00', created_at: '2024-12-18' },
@@ -107,11 +100,23 @@ export const mockRadiologyRequests: RadiologyRequest[] = [
   { id: '5', patient_id: '6', patient_name: 'Jennifer Lee', patient_age: 36, patient_gender: 'female', doctor_id: '2', doctor_name: 'Dr. Sarah Wilson', radiology_type: 'mammography', examination: 'Diagnostic Mammogram', clinical_history: 'Breast lump suspected', status: 'completed', appointment_date: '2024-12-18', appointment_time: '11:00', findings: 'No suspicious lesions detected. BI-RADS 1.', impression: 'Normal mammogram', completed_at: '2024-12-18 12:00', created_at: '2024-12-17' },
 ];
 
-// Billing mock data
 export const mockBillingInvoices: BillingInvoice[] = [
   { id: '1', patient_id: '1', patient_name: 'John Smith', patient_phone: '+1234567890', invoice_number: 'INV-2024-001', billing_type: 'ipd', items: [{ id: '1', description: 'ICU Room Charge (5 days)', quantity: 5, unit_price: 500, total: 2500 }, { id: '2', description: 'Cardiac Monitoring', quantity: 5, unit_price: 200, total: 1000 }, { id: '3', description: 'Consultation Fee', quantity: 3, unit_price: 150, total: 450 }], subtotal: 3950, discount: 200, tax: 300, total: 4050, amount_paid: 4050, status: 'paid', paid_at: '2024-12-20', created_at: '2024-12-15' },
   { id: '2', patient_id: '2', patient_name: 'Emily Johnson', patient_phone: '+1234567892', invoice_number: 'INV-2024-002', billing_type: 'consultation', items: [{ id: '1', description: 'Consultation Fee - Dr. James Chen', quantity: 1, unit_price: 120, total: 120 }, { id: '2', description: 'X-Ray - Knee', quantity: 1, unit_price: 150, total: 150 }, { id: '3', description: 'Pain Medication', quantity: 1, unit_price: 45, total: 45 }], subtotal: 315, discount: 0, tax: 25, total: 340, amount_paid: 0, status: 'pending', due_date: '2024-12-27', created_at: '2024-12-20' },
   { id: '3', patient_id: '3', patient_name: 'Michael Brown', patient_phone: '+1234567894', invoice_number: 'INV-2024-003', billing_type: 'ipd', items: [{ id: '1', description: 'Ward Room Charge (3 days)', quantity: 3, unit_price: 300, total: 900 }, { id: '2', description: 'Hip Surgery', quantity: 1, unit_price: 5000, total: 5000 }, { id: '3', description: 'Anesthesia', quantity: 1, unit_price: 800, total: 800 }, { id: '4', description: 'Physiotherapy Sessions', quantity: 5, unit_price: 100, total: 500 }], subtotal: 7200, discount: 500, tax: 600, total: 7300, amount_paid: 3650, status: 'partial', created_at: '2024-12-18' },
   { id: '4', patient_id: '4', patient_name: 'Sarah Davis', patient_phone: '+1234567896', invoice_number: 'INV-2024-004', billing_type: 'laboratory', items: [{ id: '1', description: 'Blood Test Package', quantity: 1, unit_price: 200, total: 200 }, { id: '2', description: 'Urine Analysis', quantity: 1, unit_price: 80, total: 80 }], subtotal: 280, discount: 0, tax: 22, total: 302, amount_paid: 302, status: 'paid', paid_at: '2024-12-19', created_at: '2024-12-19' },
   { id: '5', patient_id: '6', patient_name: 'Jennifer Lee', patient_phone: '+1234567900', invoice_number: 'INV-2024-005', billing_type: 'radiology', items: [{ id: '1', description: 'Mammography', quantity: 1, unit_price: 350, total: 350 }, { id: '2', description: 'Consultation Fee', quantity: 1, unit_price: 150, total: 150 }], subtotal: 500, discount: 50, tax: 40, total: 490, amount_paid: 0, status: 'pending', due_date: '2025-01-05', created_at: '2024-12-18' },
+];
+
+export const mockDocuments: Document[] = [
+  { id: '1', title: 'COVID-19 Treatment Protocol v2.3', filename: 'COVID19_Protocol_v2.3.pdf', category: 'protocol', size: '1.2 MB', mime_type: 'application/pdf', uploaded_by: '2', uploaded_by_name: 'Dr. Sarah Wilson', status: 'active', uploaded_at: '2024-12-15', views: 247, downloads: 89, tags: ['covid', 'protocol', 'treatment', 'respiratory'], department_id: '1' },
+  { id: '2', title: 'Hypertension Management Guideline', filename: 'Hypertension_Guideline_2024.pdf', category: 'guideline', size: '892 KB', mime_type: 'application/pdf', uploaded_by: '3', uploaded_by_name: 'Dr. James Chen', status: 'active', uploaded_at: '2024-12-14', views: 156, downloads: 42, tags: ['hypertension', 'cardiology', 'guideline'], department_id: '1' },
+  { id: '3', title: 'Emergency Department SOP', filename: 'Emergency_SOP_v1.8.docx', category: 'sop', size: '345 KB', mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', uploaded_by: '1', uploaded_by_name: 'Admin User', status: 'active', uploaded_at: '2024-12-10', views: 89, downloads: 23, tags: ['emergency', 'sop', 'triage'], department_id: '6' },
+  { id: '4', title: 'Antibiotic Stewardship Policy', filename: 'Antibiotic_Policy.pdf', category: 'guideline', size: '2.1 MB', mime_type: 'application/pdf', uploaded_by: '5', uploaded_by_name: 'Michael Brown', status: 'active', uploaded_at: '2024-12-12', views: 203, downloads: 67, tags: ['antibiotic', 'stewardship', 'infection'] },
+  { id: '5', title: 'Nursing Procedures Manual', filename: 'Nursing_Manual_2024.pdf', category: 'manual', size: '4.8 MB', mime_type: 'application/pdf', uploaded_by: '4', uploaded_by_name: 'Emily Davis', status: 'active', uploaded_at: '2024-12-08', views: 134, downloads: 56, tags: ['nursing', 'manual', 'procedure'] },
+  { id: '6', title: 'ECG Interpretation Guide', filename: 'ECG_Guide_v3.2.pdf', category: 'training', size: '1.8 MB', mime_type: 'application/pdf', uploaded_by: '2', uploaded_by_name: 'Dr. Sarah Wilson', status: 'active', uploaded_at: '2024-12-16', views: 78, downloads: 19, tags: ['ecg', 'cardiology', 'training'], department_id: '1' },
+  { id: '7', title: 'Monthly Quality Report - Nov 2024', filename: 'Quality_Report_Nov2024.xlsx', category: 'report', size: '156 KB', mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', uploaded_by: '8', uploaded_by_name: 'Karen Martinez', status: 'archived', uploaded_at: '2024-12-05', views: 45, downloads: 12, tags: ['report', 'quality', 'metrics'] },
+  { id: '8', title: 'Ventilator Management Protocol', filename: 'Ventilator_Protocol.pdf', category: 'protocol', size: '1.5 MB', mime_type: 'application/pdf', uploaded_by: '2', uploaded_by_name: 'Dr. Sarah Wilson', status: 'active', uploaded_at: '2024-12-17', views: 312, downloads: 134, tags: ['ventilator', 'icu', 'protocol', 'criticalcare'], department_id: '6' },
+  { id: '9', title: 'Diabetic Foot Care Guideline', filename: 'Diabetic_Foot_Guideline.pdf', category: 'guideline', size: '2.3 MB', mime_type: 'application/pdf', uploaded_by: '3', uploaded_by_name: 'Dr. James Chen', status: 'active', uploaded_at: '2024-12-13', views: 98, downloads: 28, tags: ['diabetes', 'footcare', 'endocrinology'], department_id: '4' },
+  { id: '10', title: 'Blood Transfusion SOP', filename: 'Blood_Transfusion_SOP.pdf', category: 'sop', size: '1.1 MB', mime_type: 'application/pdf', uploaded_by: '1', uploaded_by_name: 'Admin User', status: 'active', uploaded_at: '2024-12-11', views: 167, downloads: 54, tags: ['blood', 'transfusion', 'sop'] },
 ];

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Building2, ClipboardList, Package,
   UserCog, CalendarDays, Stethoscope, FlaskConical, Scan,
-  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen
+  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -36,6 +36,7 @@ const supportNav = [
 const managementNav = [
   { title: 'Task Management', url: '/tasks', icon: ClipboardList },
   { title: 'Inventory', url: '/inventory', icon: Package },
+  { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen },
 ];
 
