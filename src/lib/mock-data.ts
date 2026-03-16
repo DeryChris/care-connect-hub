@@ -2,6 +2,7 @@ import { User, Department, Task, InventoryItem, Patient, Appointment, Laboratory
 
 export const mockUsers: User[] = [
   { id: '1', name: 'Admin User', email: 'admin@hmis.com', role: 'admin', designation: 'admin_staff', phone: '+1234567890', is_active: true, permissions: [], created_at: '2024-01-15' },
+  { id: '9', name: 'Super Admin', email: 'superadmin@hmis.com', role: 'admin', designation: 'admin_staff', phone: '+1234567899', is_active: true, permissions: ['general', 'appointment', 'opd', 'ipd', 'pharmacy', 'inventory', 'laboratory', 'registration', 'billing', 'reports', 'radiology', 'emergency', 'surgery', 'icu', 'wards', 'admin', 'settings', 'users', 'departments', 'tasks', 'documents', 'knowledge', 'analytics'], created_at: '2024-01-01' },
   { id: '2', name: 'Dr. Sarah Wilson', email: 'sarah@hmis.com', role: 'user', designation: 'doctor', phone: '+1234567891', is_active: true, permissions: ['general','appointment','opd','ipd'], department_id: '1', specialization: 'Cardiology', qualification: 'MBBS, MD', fee: 150, created_at: '2024-02-10' },
   { id: '3', name: 'Dr. James Chen', email: 'james@hmis.com', role: 'user', designation: 'doctor', phone: '+1234567892', is_active: true, permissions: ['general','appointment','opd'], department_id: '2', specialization: 'Orthopedics', qualification: 'MBBS, MS', fee: 120, created_at: '2024-02-15' },
   { id: '4', name: 'Emily Davis', email: 'emily@hmis.com', role: 'user', designation: 'nurse', phone: '+1234567893', is_active: true, permissions: ['general','ipd','opd'], created_at: '2024-03-01' },
