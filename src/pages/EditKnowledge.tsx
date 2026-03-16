@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mockDepartments } from '@/lib/mock-data';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { hasContentPermission, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
+import { getWorkflowStatus } from '@/lib/content-workflow';
 
 type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
 type ViewMode = 'edit' | 'preview' | 'split';
