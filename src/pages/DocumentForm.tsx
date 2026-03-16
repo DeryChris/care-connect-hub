@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockDocuments, mockDepartments } from '@/lib/mock-data';
 import { hasContentPermission, STATUS_LABELS, STATUS_COLORS, getAllowedStatusTransitions, type DocumentStatus } from '@/lib/permissions';
+import { getWorkflowStatus } from '@/lib/content-workflow';
 
 const DOCUMENT_CATEGORIES = [
   { value: 'protocol', label: 'Protocol' },
@@ -46,9 +47,12 @@ const DocumentForm = () => {
       setTitle(existingDoc.title);
       setFilename(existingDoc.filename);
       setCategory(existingDoc.category);
-      setDepartmentId(existingDoc.department_id || '');
+      setDepartmentId(existingDoc.department_id || '__all__');
       setTags(existingDoc.tags || []);
-      setStatus(existingDoc.status as DocumentStatus);
+      setStatus(getWorkflowStatus('document', existingDoc.id, existingDoc.status));
+      setDescription(`Reference notes for ${existingDoc.title}.`);
+    } else {
+      setDepartmentId('__all__');
     }
   }, [existingDoc]);
 
@@ -272,7 +276,7 @@ const DocumentForm = () => {
                     <SelectValue placeholder="All departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All departments</SelectItem>
+                    <SelectItem value="__all__">All departments</SelectItem>
                     {mockDepartments.filter(d => d.is_active).map(d => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}

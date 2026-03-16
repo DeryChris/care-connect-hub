@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mockDepartments } from '@/lib/mock-data';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { hasContentPermission, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
+import { getWorkflowStatus } from '@/lib/content-workflow';
 
 type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
 type ViewMode = 'edit' | 'preview' | 'split';
@@ -47,7 +48,7 @@ const EditKnowledge = () => {
     if (article) {
       setTitle(article.title);
       setCategory(article.category);
-      setDepartmentId(article.department_id || '');
+      setDepartmentId(article.department_id || '__all__');
       setContent(article.content);
       setTags(article.tags);
     }
@@ -69,7 +70,7 @@ const EditKnowledge = () => {
   const canReview = hasContentPermission(user, 'review', 'knowledge', article.author_id);
   const canApprove = hasContentPermission(user, 'approve', 'knowledge', article.author_id);
 
-  const currentStatus = article.status as DocumentStatus;
+  const currentStatus = getWorkflowStatus('knowledge', article.id, article.status);
   const allowedTransitions = getAllowedStatusTransitions(user, currentStatus, article.author_id);
 
   if (!canEdit) {
@@ -300,7 +301,7 @@ const EditKnowledge = () => {
                 <Select value={departmentId} onValueChange={setDepartmentId}>
                   <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All departments</SelectItem>
+                    <SelectItem value="__all__">All departments</SelectItem>
                     {mockDepartments.filter(d => d.is_active).map(d => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}

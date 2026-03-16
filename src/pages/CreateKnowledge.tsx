@@ -12,6 +12,7 @@ import { ArrowLeft, Eye, Edit2, Tag, X, Save, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockDepartments } from '@/lib/mock-data';
+import { hasContentPermission } from '@/lib/permissions';
 
 type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
 type ArticleStatus = 'draft' | 'review';
@@ -28,6 +29,7 @@ const CATEGORIES: { value: ArticleCategory; label: string }[] = [
 const CreateKnowledge = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const canCreate = hasContentPermission(user, 'create', 'knowledge');
   const { toast } = useToast();
 
   const [title, setTitle] = useState('');
@@ -81,6 +83,17 @@ const CreateKnowledge = () => {
   };
 
   const isReviewer = user?.role === 'admin' || user?.designation === 'doctor';
+
+  if (!canCreate) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 space-y-4">
+        <Send className="h-16 w-16 text-muted-foreground/40" />
+        <h2 className="text-xl font-semibold">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have permission to create knowledge articles.</p>
+        <Button onClick={() => navigate('/knowledge')}>Back to Knowledge Base</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

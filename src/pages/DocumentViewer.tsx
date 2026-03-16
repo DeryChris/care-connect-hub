@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Download, X, Eye, Share2, Tag, User, Calendar, FileText } from 'lucide-react';
 import { mockDocuments } from '@/lib/mock-data';
 import { Document as DocumentType } from '@/lib/constants';
+import CommentsSection from '@/components/content/CommentsSection';
+import { getWorkflowStatus } from '@/lib/content-workflow';
+import { STATUS_COLORS, STATUS_LABELS } from '@/lib/permissions';
 
 interface DocumentViewerProps {
   documentId: string;
@@ -116,16 +119,15 @@ const DocumentViewer = ({ documentId, isOpen, onClose }: DocumentViewerProps) =>
         setTimeout(() => {
           setContent(sampleContent[found.id as keyof typeof sampleContent] || `## ${found.title}\n\nFull document content is available for download.\n\nThis document (${found.filename}) was uploaded on ${found.uploaded_at} by ${found.uploaded_by_name}.\n\nPlease download the file to view complete contents.`);
           setLoading(false);
-        }, 800);
+        }, 300);
       }
     }
   }, [isOpen, documentId]);
 
   if (!doc) return null;
 
-  const mimeIcon = doc.mime_type.includes('pdf') ? '📄' :
-    doc.mime_type.includes('spreadsheet') ? '📊' :
-    doc.mime_type.includes('word') ? '📝' : '📁';
+  const mimeIcon = doc.mime_type.includes('pdf') ? '📄' : doc.mime_type.includes('spreadsheet') ? '📊' : doc.mime_type.includes('word') ? '📝' : '📁';
+  const workflowStatus = getWorkflowStatus('document', doc.id, doc.status);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -140,94 +142,60 @@ const DocumentViewer = ({ documentId, isOpen, onClose }: DocumentViewerProps) =>
                 <div className="flex items-center flex-wrap gap-2 mt-2">
                   <Badge variant="secondary" className="capitalize">{doc.category}</Badge>
                   <Badge variant="outline">{doc.size}</Badge>
-                  <Badge variant={doc.status === 'active' ? 'default' : 'outline'} className="capitalize">{doc.status}</Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Eye className="h-3 w-3" /> {doc.views} views
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Download className="h-3 w-3" /> {doc.downloads} downloads
-                  </div>
+                  <Badge className={STATUS_COLORS[workflowStatus]}>{STATUS_LABELS[workflowStatus]}</Badge>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground"><Eye className="h-3 w-3" /> {doc.views} views</div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground"><Download className="h-3 w-3" /> {doc.downloads} downloads</div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <Button variant="ghost" size="icon" title="Download">
-                <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" title="Share">
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <DialogClose asChild>
-                <Button variant="ghost" size="icon">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
+              <Button variant="ghost" size="icon" title="Download"><Download className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" title="Share"><Share2 className="h-4 w-4" /></Button>
+              <DialogClose asChild><Button variant="ghost" size="icon"><X className="h-4 w-4" /></Button></DialogClose>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex overflow-hidden min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {loading ? (
-            <div className="flex-1 flex items-center justify-center p-8">
+            <div className="flex items-center justify-center p-8">
               <div className="text-center">
                 <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
                 <p className="text-muted-foreground">Loading document...</p>
               </div>
             </div>
           ) : (
-            <>
-              {/* Main content */}
-              <div className="flex-1 p-6 overflow-y-auto">
-                <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-6 rounded-lg border font-mono overflow-x-auto leading-relaxed">
-                  {content}
-                </pre>
+            <div className="grid lg:grid-cols-[1fr_260px] min-h-0">
+              <div className="p-6 space-y-6">
+                <pre className="whitespace-pre-wrap text-sm bg-muted/30 p-6 rounded-lg border font-mono overflow-x-auto leading-relaxed">{content}</pre>
+                <CommentsSection targetId={doc.id} targetType="document" title="Document Comments" />
               </div>
 
-              {/* Sidebar */}
-              <div className="w-64 shrink-0 border-l p-4 overflow-y-auto bg-muted/20 space-y-5">
+              <div className="border-l p-4 bg-muted/20 space-y-5">
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Document Info</p>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="h-3.5 w-3.5 shrink-0" />
-                      <span>{doc.uploaded_by_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
-                      <span>{doc.uploaded_at}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate text-xs">{doc.mime_type.split('/').pop()?.toUpperCase()}</span>
-                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><User className="h-3.5 w-3.5 shrink-0" /><span>{doc.uploaded_by_name}</span></div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><Calendar className="h-3.5 w-3.5 shrink-0" /><span>{doc.uploaded_at}</span></div>
+                    <div className="flex items-center gap-2 text-muted-foreground"><FileText className="h-3.5 w-3.5 shrink-0" /><span className="truncate text-xs">{doc.mime_type.split('/').pop()?.toUpperCase()}</span></div>
                   </div>
                 </div>
 
-                {doc.tags && doc.tags.length > 0 && (
+                {doc.tags.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                      <Tag className="h-3 w-3" /> Tags
-                    </p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1"><Tag className="h-3 w-3" /> Tags</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {doc.tags.map(tag => (
-                        <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                          {tag}
-                        </span>
-                      ))}
+                      {doc.tags.map(tag => <span key={tag} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{tag}</span>)}
                     </div>
                   </div>
                 )}
 
                 <div className="pt-2 border-t space-y-2">
-                  <Button className="w-full" size="sm">
-                    <Download className="h-3.5 w-3.5 mr-2" /> Download
-                  </Button>
-                  <Button variant="outline" className="w-full" size="sm">
-                    <Share2 className="h-3.5 w-3.5 mr-2" /> Share
-                  </Button>
+                  <Button className="w-full" size="sm"><Download className="h-3.5 w-3.5 mr-2" /> Download</Button>
+                  <Button variant="outline" className="w-full" size="sm"><Share2 className="h-3.5 w-3.5 mr-2" /> Share</Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </DialogContent>

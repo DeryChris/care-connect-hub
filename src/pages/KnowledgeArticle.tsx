@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
@@ -8,14 +9,9 @@ import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
-
-const statusColors: Record<string, string> = {
-  approved: 'bg-success text-success-foreground',
-  review: 'bg-warning text-warning-foreground',
-  draft: 'bg-muted text-muted-foreground',
-  archived: 'bg-secondary text-secondary-foreground',
-};
+import { getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
+import { getWorkflowStatus, setWorkflowStatus, useWorkflowRefresh } from '@/lib/content-workflow';
+import CommentsSection from '@/components/content/CommentsSection';
 
 const categoryColors: Record<string, string> = {
   protocol: 'bg-primary/10 text-primary',
@@ -30,20 +26,12 @@ const KnowledgeArticlePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const refreshWorkflow = useWorkflowRefresh();
+  const [localViews, setLocalViews] = useState<Record<string, number>>({});
 
   const article = mockKnowledgeArticles.find(a => a.id === id);
   const author = article ? mockUsers.find(u => u.id === article.author_id) : null;
   const department = article?.department_id ? mockDepartments.find(d => d.id === article.department_id) : null;
-  
-  const perms = article ? getContentPermissions(user, 'knowledge', article.author_id) : null;
-  const artStatus = (article?.status || 'draft') as DocumentStatus;
-  const transitions = article ? getAllowedStatusTransitions(user, artStatus, article.author_id) : [];
-
-
-  // Related articles: same category, exclude current
-  const related = article
-    ? mockKnowledgeArticles.filter(a => a.category === article.category && a.id !== article.id).slice(0, 4)
-    : [];
 
   if (!article) {
     return (
@@ -58,9 +46,23 @@ const KnowledgeArticlePage = () => {
     );
   }
 
+  const perms = getContentPermissions(user, 'knowledge', article.author_id);
+  const artStatus = getWorkflowStatus('knowledge', article.id, article.status);
+  const transitions = getAllowedStatusTransitions(user, artStatus, article.author_id);
+  const related = mockKnowledgeArticles.filter(a => a.category === article.category && a.id !== article.id).slice(0, 4);
+  const viewCount = localViews[article.id] ?? article.views;
+
+  const handleStatusChange = (nextStatus: 'approved' | 'rejected') => {
+    setWorkflowStatus('knowledge', article.id, nextStatus);
+    refreshWorkflow();
+    toast({
+      title: nextStatus === 'approved' ? 'Article approved' : 'Article rejected',
+      description: nextStatus === 'approved' ? 'Published to Knowledge Base.' : 'Returned to the author for revision.',
+    });
+  };
+
   return (
     <div className="space-y-6 animate-fade-in max-w-5xl">
-      {/* Breadcrumb / back */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link to="/knowledge" className="hover:text-foreground flex items-center gap-1">
           <ArrowLeft className="h-4 w-4" /> Knowledge Base
@@ -72,9 +74,7 @@ const KnowledgeArticlePage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
-        {/* Main content */}
         <div className="space-y-4">
-          {/* Header card */}
           <Card>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
@@ -83,37 +83,30 @@ const KnowledgeArticlePage = () => {
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full capitalize ${categoryColors[article.category] || 'bg-muted text-muted-foreground'}`}>
                       {article.category.replace('_', ' ')}
                     </span>
-                    <Badge className={statusColors[article.status] || 'bg-muted'}>
-                      {article.status === 'approved' && <CheckCircle className="h-3 w-3 mr-1" />}
-                      {article.status.charAt(0).toUpperCase() + article.status.slice(1)}
-                    </Badge>
+                    <Badge className={STATUS_COLORS[artStatus]}>{STATUS_LABELS[artStatus]}</Badge>
                     <span className="text-xs text-muted-foreground">v{article.version}</span>
                   </div>
                   <h1 className="text-2xl font-bold font-display">{article.title}</h1>
                 </div>
-                {perms?.update && (
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
+                  {perms.update && (
                     <Link to={`/knowledge/${article.id}/edit`}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
                       </Button>
                     </Link>
-                    {transitions.includes('approved') && artStatus === 'review' && (
-                      <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => {
-                        toast({ title: 'Article approved', description: 'Published to Knowledge Base.' });
-                      }}>
-                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve
-                      </Button>
-                    )}
-                    {transitions.includes('rejected') && artStatus === 'review' && (
-                      <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => {
-                        toast({ title: 'Article rejected', description: 'Sent back for revision.' });
-                      }}>
-                        <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                      </Button>
-                    )}
-                  </div>
-                )}
+                  )}
+                  {transitions.includes('approved') && artStatus === 'review' && (
+                    <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground" onClick={() => handleStatusChange('approved')}>
+                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Approve
+                    </Button>
+                  )}
+                  {transitions.includes('rejected') && artStatus === 'review' && (
+                    <Button variant="outline" size="sm" className="text-destructive border-destructive/30" onClick={() => handleStatusChange('rejected')}>
+                      <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center flex-wrap gap-4 text-sm text-muted-foreground border-t pt-4">
@@ -126,10 +119,10 @@ const KnowledgeArticlePage = () => {
                   <Clock className="h-4 w-4" />
                   <span>Updated {new Date(article.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <button className="flex items-center gap-1.5 hover:text-foreground" onClick={() => setLocalViews(prev => ({ ...prev, [article.id]: viewCount + 1 }))}>
                   <Eye className="h-4 w-4" />
-                  <span>{article.views} views</span>
-                </div>
+                  <span>{viewCount} views</span>
+                </button>
               </div>
 
               {article.tags.length > 0 && (
@@ -145,7 +138,6 @@ const KnowledgeArticlePage = () => {
             </CardContent>
           </Card>
 
-          {/* Article content rendered as markdown */}
           <Card>
             <CardContent className="p-6">
               <div className="prose prose-sm max-w-none
@@ -166,57 +158,35 @@ const KnowledgeArticlePage = () => {
               </div>
             </CardContent>
           </Card>
+
+          <CommentsSection targetId={article.id} targetType="knowledge" title="Reader Comments" />
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
-          {/* Quick info */}
           <Card>
             <CardContent className="p-4 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">About this article</p>
               <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Created</span>
-                  <span>{new Date(article.created_at).toLocaleDateString('en-GB')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last updated</span>
-                  <span>{new Date(article.updated_at).toLocaleDateString('en-GB')}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Version</span>
-                  <span>v{article.version}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Views</span>
-                  <span>{article.views}</span>
-                </div>
-                {department && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Department</span>
-                    <span>{department.name}</span>
-                  </div>
-                )}
+                <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span>{new Date(article.created_at).toLocaleDateString('en-GB')}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Last updated</span><span>{new Date(article.updated_at).toLocaleDateString('en-GB')}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span>v{article.version}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge className={STATUS_COLORS[artStatus]}>{STATUS_LABELS[artStatus]}</Badge></div>
+                {department && <div className="flex justify-between"><span className="text-muted-foreground">Department</span><span>{department.name}</span></div>}
               </div>
             </CardContent>
           </Card>
 
-          {/* Related articles */}
           {related.length > 0 && (
             <Card>
               <CardContent className="p-4 space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Related Articles</p>
                 <div className="space-y-2">
                   {related.map(rel => (
-                    <Link
-                      key={rel.id}
-                      to={`/knowledge/${rel.id}`}
-                      className="block p-2 rounded-lg hover:bg-muted transition-colors"
-                    >
+                    <Link key={rel.id} to={`/knowledge/${rel.id}`} className="block p-2 rounded-lg hover:bg-muted transition-colors">
                       <p className="text-sm font-medium line-clamp-2 hover:text-primary">{rel.title}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <Badge className={statusColors[rel.status] || ''} style={{ fontSize: '10px', padding: '1px 6px' }}>
-                          {rel.status}
+                        <Badge className={STATUS_COLORS[getWorkflowStatus('knowledge', rel.id, rel.status)]} style={{ fontSize: '10px', padding: '1px 6px' }}>
+                          {STATUS_LABELS[getWorkflowStatus('knowledge', rel.id, rel.status)]}
                         </Badge>
                         <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                           <Eye className="h-2.5 w-2.5" /> {rel.views}
