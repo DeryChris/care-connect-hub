@@ -276,7 +276,7 @@ const DocumentForm = () => {
                     <SelectValue placeholder="All departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All departments</SelectItem>
+                    <SelectItem value="__all__">All departments</SelectItem>
                     {mockDepartments.filter(d => d.is_active).map(d => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
