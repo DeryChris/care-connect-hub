@@ -47,9 +47,12 @@ const DocumentForm = () => {
       setTitle(existingDoc.title);
       setFilename(existingDoc.filename);
       setCategory(existingDoc.category);
-      setDepartmentId(existingDoc.department_id || '');
+      setDepartmentId(existingDoc.department_id || '__all__');
       setTags(existingDoc.tags || []);
-      setStatus(existingDoc.status as DocumentStatus);
+      setStatus(getWorkflowStatus('document', existingDoc.id, existingDoc.status));
+      setDescription(`Reference notes for ${existingDoc.title}.`);
+    } else {
+      setDepartmentId('__all__');
     }
   }, [existingDoc]);
 
