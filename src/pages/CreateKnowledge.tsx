@@ -12,6 +12,7 @@ import { ArrowLeft, Eye, Edit2, Tag, X, Save, Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockDepartments } from '@/lib/mock-data';
+import { hasContentPermission } from '@/lib/permissions';
 
 type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
 type ArticleStatus = 'draft' | 'review';
