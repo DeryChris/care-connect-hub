@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockDocuments, mockDepartments } from '@/lib/mock-data';
 import { hasContentPermission, STATUS_LABELS, STATUS_COLORS, getAllowedStatusTransitions, type DocumentStatus } from '@/lib/permissions';
+import { getWorkflowStatus } from '@/lib/content-workflow';
 
 const DOCUMENT_CATEGORIES = [
   { value: 'protocol', label: 'Protocol' },
