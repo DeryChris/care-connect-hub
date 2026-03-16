@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,17 +6,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { Search, BookOpen, FileText, Eye, Edit, CheckCircle, XCircle } from 'lucide-react';
+import { Search, BookOpen, FileText, Eye, Edit, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { mockKnowledgeArticles } from '@/lib/mock-knowledge';
 import { KnowledgeArticle } from '@/lib/constants';
 import { mockUsers, mockDepartments } from '@/lib/mock-data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { hasContentPermission, getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS, type DocumentStatus } from '@/lib/permissions';
+import { hasContentPermission, getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
+import { getWorkflowStatus, setWorkflowStatus, useWorkflowRefresh } from '@/lib/content-workflow';
+import { getCommentsForTarget } from '@/lib/mock-comments';
 
 const KnowledgeBase = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const refreshWorkflow = useWorkflowRefresh();
   const [articles] = useState(mockKnowledgeArticles);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -34,7 +37,7 @@ const KnowledgeBase = () => {
       article.author_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (categoryFilter !== 'all') filtered = filtered.filter((a: KnowledgeArticle) => a.category === categoryFilter);
-    if (statusFilter !== 'all') filtered = filtered.filter((a: KnowledgeArticle) => a.status === statusFilter);
+    if (statusFilter !== 'all') filtered = filtered.filter((a: KnowledgeArticle) => getWorkflowStatus('knowledge', a.id, a.status) === statusFilter);
     return filtered;
   }, [searchTerm, categoryFilter, statusFilter, articles]);
 
@@ -44,11 +47,13 @@ const KnowledgeBase = () => {
   const getAuthorName = (authorId: string) => mockUsers.find(u => u.id === authorId)?.name || 'Unknown';
   const getDeptName = (deptId?: string) => deptId ? mockDepartments.find(d => d.id === deptId)?.name || 'N/A' : 'N/A';
 
-  const handleQuickApprove = (articleId: string) => {
-    toast({ title: 'Article approved', description: 'Published to Knowledge Base.' });
-  };
-  const handleQuickReject = (articleId: string) => {
-    toast({ title: 'Article rejected', description: 'Sent back for revision.' });
+  const handleStatusChange = (articleId: string, nextStatus: 'approved' | 'rejected') => {
+    setWorkflowStatus('knowledge', articleId, nextStatus);
+    refreshWorkflow();
+    toast({
+      title: nextStatus === 'approved' ? 'Article approved' : 'Article rejected',
+      description: nextStatus === 'approved' ? 'Published to Knowledge Base.' : 'Sent back for revision.',
+    });
   };
 
   return (
@@ -69,35 +74,13 @@ const KnowledgeBase = () => {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-primary">{articles.length}</div>
-            <p className="text-sm text-muted-foreground mt-1">Total Articles</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-success">{articles.filter(a => a.status === 'approved').length}</div>
-            <p className="text-sm text-muted-foreground mt-1">Approved</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-warning">{articles.filter(a => a.status === 'review').length}</div>
-            <p className="text-sm text-muted-foreground mt-1">Pending Review</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <div className="text-3xl font-bold text-info">{articles.reduce((s, a) => s + a.views, 0)}</div>
-            <p className="text-sm text-muted-foreground mt-1">Total Views</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-6 text-center"><div className="text-3xl font-bold text-primary">{articles.length}</div><p className="text-sm text-muted-foreground mt-1">Total Articles</p></CardContent></Card>
+        <Card><CardContent className="p-6 text-center"><div className="text-3xl font-bold text-success">{articles.filter(a => getWorkflowStatus('knowledge', a.id, a.status) === 'approved').length}</div><p className="text-sm text-muted-foreground mt-1">Approved</p></CardContent></Card>
+        <Card><CardContent className="p-6 text-center"><div className="text-3xl font-bold text-warning">{articles.filter(a => getWorkflowStatus('knowledge', a.id, a.status) === 'review').length}</div><p className="text-sm text-muted-foreground mt-1">Pending Review</p></CardContent></Card>
+        <Card><CardContent className="p-6 text-center"><div className="text-3xl font-bold text-info">{articles.reduce((s, a) => s + a.views, 0)}</div><p className="text-sm text-muted-foreground mt-1">Total Views</p></CardContent></Card>
       </div>
 
-      {/* Search & Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-wrap gap-3 items-end">
@@ -131,7 +114,6 @@ const KnowledgeBase = () => {
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -141,7 +123,7 @@ const KnowledgeBase = () => {
                 <TableHead>Category</TableHead>
                 <TableHead>Author</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Views</TableHead>
+                <TableHead>Engagement</TableHead>
                 <TableHead>Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -149,60 +131,40 @@ const KnowledgeBase = () => {
             <TableBody>
               {paginated.map(article => {
                 const perms = getContentPermissions(user, 'knowledge', article.author_id);
-                const artStatus = article.status as DocumentStatus;
+                const artStatus = getWorkflowStatus('knowledge', article.id, article.status);
                 const transitions = getAllowedStatusTransitions(user, artStatus, article.author_id);
-                const canApproveThis = transitions.includes('approved');
-                const canRejectThis = transitions.includes('rejected');
+                const commentCount = getCommentsForTarget('knowledge', article.id).length;
 
                 return (
                   <TableRow key={article.id}>
                     <TableCell className="font-medium max-w-[200px]">
                       <Link to={`/knowledge/${article.id}`} className="hover:text-primary">{article.title}</Link>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{article.category.replace('_', ' ')}</Badge>
-                    </TableCell>
+                    <TableCell><Badge variant="outline" className="capitalize">{article.category.replace('_', ' ')}</Badge></TableCell>
                     <TableCell className="text-sm">
                       {getAuthorName(article.author_id)}
                       {article.department_id && <div className="text-xs text-muted-foreground">{getDeptName(article.department_id)}</div>}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={STATUS_COLORS[artStatus] || 'bg-muted'}>{STATUS_LABELS[artStatus] || article.status}</Badge>
-                    </TableCell>
+                    <TableCell><Badge className={STATUS_COLORS[artStatus]}>{STATUS_LABELS[artStatus]}</Badge></TableCell>
                     <TableCell className="text-sm">
-                      <div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {article.views}</div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {article.views}</div>
+                        <div className="flex items-center gap-1 text-muted-foreground"><MessageSquare className="h-3 w-3" /> {commentCount}</div>
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{new Date(article.updated_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Link to={`/knowledge/${article.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="View"><FileText className="h-3.5 w-3.5" /></Button>
-                        </Link>
-                        {perms.update && (
-                          <Link to={`/knowledge/${article.id}/edit`}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit"><Edit className="h-3.5 w-3.5" /></Button>
-                          </Link>
-                        )}
-                        {canApproveThis && artStatus === 'review' && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-success-foreground" onClick={() => handleQuickApprove(article.id)} title="Approve">
-                            <CheckCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        {canRejectThis && artStatus === 'review' && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleQuickReject(article.id)} title="Reject">
-                            <XCircle className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                        <Link to={`/knowledge/${article.id}`}><Button variant="ghost" size="icon" className="h-8 w-8" title="View"><FileText className="h-3.5 w-3.5" /></Button></Link>
+                        {perms.update && <Link to={`/knowledge/${article.id}/edit`}><Button variant="ghost" size="icon" className="h-8 w-8" title="Edit"><Edit className="h-3.5 w-3.5" /></Button></Link>}
+                        {transitions.includes('approved') && artStatus === 'review' && <Button variant="ghost" size="icon" className="h-8 w-8 text-success-foreground" onClick={() => handleStatusChange(article.id, 'approved')} title="Approve"><CheckCircle className="h-3.5 w-3.5" /></Button>}
+                        {transitions.includes('rejected') && artStatus === 'review' && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleStatusChange(article.id, 'rejected')} title="Reject"><XCircle className="h-3.5 w-3.5" /></Button>}
                       </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
-              {paginated.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">No knowledge articles found matching your search.</TableCell>
-                </TableRow>
-              )}
+              {paginated.length === 0 && <TableRow><TableCell colSpan={7} className="h-24 text-center">No knowledge articles found matching your search.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
