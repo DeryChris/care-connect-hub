@@ -84,6 +84,17 @@ const CreateKnowledge = () => {
 
   const isReviewer = user?.role === 'admin' || user?.designation === 'doctor';
 
+  if (!canCreate) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 space-y-4">
+        <Send className="h-16 w-16 text-muted-foreground/40" />
+        <h2 className="text-xl font-semibold">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have permission to create knowledge articles.</p>
+        <Button onClick={() => navigate('/knowledge')}>Back to Knowledge Base</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
