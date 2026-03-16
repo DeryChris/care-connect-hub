@@ -48,7 +48,7 @@ const EditKnowledge = () => {
     if (article) {
       setTitle(article.title);
       setCategory(article.category);
-      setDepartmentId(article.department_id || '');
+      setDepartmentId(article.department_id || '__all__');
       setContent(article.content);
       setTags(article.tags);
     }
