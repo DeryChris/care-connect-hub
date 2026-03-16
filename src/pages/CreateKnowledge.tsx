@@ -29,6 +29,7 @@ const CATEGORIES: { value: ArticleCategory; label: string }[] = [
 const CreateKnowledge = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const canCreate = hasContentPermission(user, 'create', 'knowledge');
   const { toast } = useToast();
 
   const [title, setTitle] = useState('');
