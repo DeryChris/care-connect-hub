@@ -70,7 +70,7 @@ const EditKnowledge = () => {
   const canReview = hasContentPermission(user, 'review', 'knowledge', article.author_id);
   const canApprove = hasContentPermission(user, 'approve', 'knowledge', article.author_id);
 
-  const currentStatus = article.status as DocumentStatus;
+  const currentStatus = getWorkflowStatus('knowledge', article.id, article.status);
   const allowedTransitions = getAllowedStatusTransitions(user, currentStatus, article.author_id);
 
   if (!canEdit) {
