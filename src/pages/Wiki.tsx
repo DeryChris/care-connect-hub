@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import MDEditor from '@uiw/react-md-editor';
-import ReactMarkdown from 'react-markdown';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import CommentsSection from '@/components/content/CommentsSection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Save, Clock, FileText, Edit2, Eye, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+import MDEditor from '@uiw/react-md-editor';
+import ReactMarkdown from 'react-markdown';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
 
 interface WikiPage {
   id: string;
@@ -243,6 +245,7 @@ const Wiki = () => {
       {/* View mode */}
       {mode === 'view' && selectedPage && (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
+          <div className="space-y-6">
           <Card>
             <CardHeader className="pb-0">
               <div className="flex items-center justify-between">
@@ -270,6 +273,8 @@ const Wiki = () => {
               </div>
             </CardContent>
           </Card>
+          <CommentsSection targetId={selectedPage.id} targetType="wiki" />
+          </div>
 
           <div className="space-y-4">
             <Card>

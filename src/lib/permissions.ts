@@ -108,11 +108,12 @@ export function getAllowedStatusTransitions(
       if (isAuthor || isAdmin) return ['review'];
       return [];
 
-    case 'review':
+    case 'review': {
       const transitions: DocumentStatus[] = [];
       if (isReviewer || isAdmin) transitions.push('draft'); // Send back
       if (isApprover) transitions.push('approved', 'rejected');
       return transitions;
+    }
 
     case 'approved':
       if (isAdmin) return ['archived', 'draft'];

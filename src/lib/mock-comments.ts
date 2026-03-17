@@ -2,7 +2,7 @@ import { mockDocuments } from './mock-data';
 import { mockKnowledgeArticles } from './mock-knowledge';
 import { mockUsers } from './mock-data';
 
-export type CommentTargetType = 'document' | 'knowledge';
+export type CommentTargetType = 'document' | 'knowledge' | 'wiki';
 
 export interface ContentComment {
   id: string;
@@ -25,6 +25,11 @@ const sampleMessages = {
     'Great article — the overview and treatment pathway are concise and practical.',
     'This was useful during rounds; consider adding one more note on escalation criteria later.',
     'Shared with the unit team. The structure makes it easy to scan quickly in urgent cases.',
+  ],
+  wiki: [
+    'This overview is very clear. Is there a plan to add a section for the new cardiology wing?',
+    'Could we get a link to the IT support portal added here? Would save time looking for it.',
+    'The formulary summary is a lifesaver. Perfect for a quick check during ward rounds.',
   ],
 };
 
@@ -71,9 +76,24 @@ const seededKnowledgeComments: ContentComment[] = mockKnowledgeArticles.map((art
   };
 });
 
+const seededWikiComments: ContentComment[] = ['1', '2', '3'].map((wikiId, index) => {
+  const commenter = mockUsers[(index + 4) % mockUsers.length];
+  return {
+    id: `wiki-comment-${wikiId}-1`,
+    targetType: 'wiki',
+    targetId: wikiId,
+    authorId: commenter.id,
+    authorName: commenter.name,
+    authorRole: commenter.designation.replace('_', ' '),
+    message: sampleMessages.wiki[index % sampleMessages.wiki.length],
+    createdAt: `2024-12-${String(2 + index * 3).padStart(2, '0')} 16:00`,
+  };
+});
+
 export const mockContentComments: ContentComment[] = [
   ...seededDocumentComments,
   ...seededKnowledgeComments,
+  ...seededWikiComments,
 ];
 
 export function getCommentsForTarget(targetType: CommentTargetType, targetId: string) {
