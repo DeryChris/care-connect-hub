@@ -20,7 +20,6 @@ const Dashboard = () => {
   const pendingTasks = mockTasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
   const activeStaff = mockUsers.filter(u => u.is_active).length;
 
-  // Perfect donut proportions - THICK strokeWidth
   const patientsByDept = [
     { name: 'Cardiology', count: 25, color: '#10b981' },
     { name: 'Orthopedics', count: 18, color: '#3b82f6' },
@@ -177,7 +176,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* SIMPLE PIE CHART - NO FANCY OVERLAY, JUST NUMBER */}
+      {/* Patients by Department Pie Chart */}
       <Card className="max-w-md mx-auto">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
@@ -192,58 +191,66 @@ const Dashboard = () => {
             </Link>
           </div>
 
-          <div className="flex flex-col items-center space-y-4">
-            {/* SIMPLIFIED PIE CHART - THICK DONUT, CLEAN CENTER TEXT */}
-            <div className="relative w-32 h-32">
-              {/* Shadows */}
-              <div className="absolute -inset-1 bg-gradient-to-r from-slate-400/30 to-slate-200/30 rounded-full blur-sm" />
-              
-              <svg viewBox="0 0 140 140" className="w-full h-full absolute inset-0">
-                {/* Background ring */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="hsl(var(--card))" strokeWidth="12" />
-                
-                {/* Pediatrics 98° */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="#f97316" strokeWidth="22" strokeLinecap="round" 
-                  strokeDasharray="98 360" strokeDashoffset="-5" pathLength="1" />
-                
-                {/* Emergency 49° */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="#ec4899" strokeWidth="22" strokeLinecap="round" 
-                  strokeDasharray="49 360" strokeDashoffset="-103" pathLength="1" />
-                
-                {/* Cardiology 82° */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="#10b981" strokeWidth="22" strokeLinecap="round" 
-                  strokeDasharray="82 360" strokeDashoffset="-152" pathLength="1" />
-                
-                {/* Orthopedics 59° */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="#3b82f6" strokeWidth="22" strokeLinecap="round" 
-                  strokeDasharray="59 360" strokeDashoffset="-234" pathLength="1" />
-                
-                {/* Neurology 72° */}
-                <circle cx="70" cy="70" r="55" fill="none" stroke="#8b5cf6" strokeWidth="22" strokeLinecap="round" 
-                  strokeDasharray="72 360" strokeDashoffset="-293" pathLength="1" />
-              </svg>
-              
-              {/* SIMPLE CENTER TEXT - NO OVERLAY */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <div className="text-3xl font-bold text-foreground drop-shadow-sm leading-none">{totalPatients}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wider font-medium mt-0.5">Patients</div>
+            <div className="flex flex-col items-center space-y-6">
+              {/* Dynamic Donut Chart */}
+              <div className="relative">
+                <svg viewBox="0 0 140 140" className="w-36 h-36">
+                  {/* Background Ring */}
+                  <circle
+                    cx="70" cy="70" r="60"
+                    fill="none" stroke="#f1f5f9" strokeWidth="12"
+                    strokeDasharray="377 377"
+                  />
+                  {/* Department segments - dynamic */}
+                  {patientsByDept.map((dept, index) => {
+                    const total = patientsByDept.reduce((sum, d) => sum + d.count, 0);
+                    const percent = total > 0 ? (dept.count / total) : 0;
+                    const startAngle = -90 + (index * 72); // 360/5 = 72 degrees per segment
+                    return (
+                      <circle
+                        key={dept.name}
+                        cx="70" cy="70" r="60"
+                        fill="none" 
+                        stroke={dept.color} 
+                        strokeWidth="12" 
+                        strokeLinecap="round"
+                        strokeDasharray={`${377 * percent} ${377}`}
+                        transform={`rotate(${startAngle} 70 70)`}
+                        className="transition-all duration-500"
+                      />
+                    );
+                  })}
+                </svg>
+                {/* Center Text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-2xl font-bold text-foreground">{totalPatients}</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mt-1">Patients</div>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-col space-y-2 w-full max-w-xs">
+                {patientsByDept.map((dept) => {
+                  const total = patientsByDept.reduce((sum, d) => sum + d.count, 0);
+                  const percent = total > 0 ? Math.round((dept.count / total) * 100) : 0;
+                  return (
+                    <div key={dept.name} className="flex items-center gap-3">
+                      <div 
+                        className="w-4 h-4 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: dept.color }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground truncate">{dept.name}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-bold text-sm">{dept.count}</span>
+                        <span className="text-xs text-muted-foreground">({percent}%)</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-
-            {/* CENTERED LEGEND - ONE LINE */}
-            <div className="w-full flex flex-wrap justify-center gap-x-6 gap-y-1 px-2 text-sm items-center">
-              {patientsByDept.map((dept) => (
-                <div key={dept.name} className="flex items-center gap-1.5">
-                  <div 
-                    className="w-2.5 h-2.5 rounded-full shadow-sm ring-1 ring-white/50"
-                    style={{ backgroundColor: dept.color }}
-                  />
-                  <span className="font-medium text-foreground whitespace-nowrap text-xs">{dept.name}</span>
-                  <span className="font-mono text-xs font-bold text-foreground ml-1.5">{dept.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
@@ -251,3 +258,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

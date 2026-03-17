@@ -126,3 +126,288 @@ export interface InventoryTransaction {
   created_by: string;
   created_at: string;
 }
+
+// Patient types
+export interface Patient {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  date_of_birth: string;
+  gender: 'male' | 'female' | 'other';
+  blood_group?: string;
+  address: string;
+  department_id?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  insurance_provider?: string;
+  insurance_number?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+// Appointment types
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentType = 'consultation' | 'followup' | 'emergency' | 'checkup';
+
+export interface Appointment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  doctor_id: string;
+  doctor_name: string;
+  department_id: string;
+  department_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  type: AppointmentType;
+  status: AppointmentStatus;
+  reason: string;
+  notes?: string;
+  created_at: string;
+}
+
+// Laboratory types
+export type LabTestStatus = 'pending' | 'sample_collected' | 'processing' | 'completed' | 'cancelled';
+export type LabTestResult = 'normal' | 'abnormal' | 'critical';
+
+export interface LaboratoryTest {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  test_name: string;
+  test_code: string;
+  category: string;
+  status: LabTestStatus;
+  result?: string;
+  result_value?: string;
+  result_unit?: string;
+  reference_range?: string;
+  result_status?: LabTestResult;
+  ordered_by: string;
+  ordered_by_name: string;
+  collected_at?: string;
+  completed_at?: string;
+  created_at: string;
+}
+
+// Pharmacy types
+export interface PharmacyItem {
+  id: string;
+  name: string;
+  generic_name?: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  min_quantity: number;
+  unit_price: number;
+  supplier: string;
+  location: string;
+  expiry_date?: string;
+  barcode: string;
+  dosage?: string;
+  side_effects?: string;
+  notes: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const APPOINTMENT_STATUSES = [
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'no_show', label: 'No Show' },
+] as const;
+
+export const APPOINTMENT_TYPES = [
+  { value: 'consultation', label: 'Consultation' },
+  { value: 'followup', label: 'Follow-up' },
+  { value: 'emergency', label: 'Emergency' },
+  { value: 'checkup', label: 'Check-up' },
+] as const;
+
+export const GENDERS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
+
+export const LAB_TEST_STATUSES = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'sample_collected', label: 'Sample Collected' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'cancelled', label: 'Cancelled' },
+] as const;
+
+export const LAB_TEST_CATEGORIES = [
+  'Hematology',
+  'Biochemistry',
+  'Microbiology',
+  'Serology',
+  'Pathology',
+  'Radiology',
+  'Other',
+] as const;
+
+export const PHARMACY_CATEGORIES = [
+  'Medicine',
+  'Injection',
+  'Syrup',
+  'Cream',
+  'Drops',
+  'Inhaler',
+  'Surgical Supply',
+  'Consumable',
+  'Other',
+] as const;
+
+// OPD Types
+export type OPDStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface OPDVisit {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_phone: string;
+  doctor_id: string;
+  doctor_name: string;
+  department_id: string;
+  department_name: string;
+  visit_date: string;
+  visit_time: string;
+  chief_complaint: string;
+  diagnosis?: string;
+  prescription?: string;
+  status: OPDStatus;
+  vitals?: {
+    blood_pressure?: string;
+    temperature?: string;
+    pulse?: string;
+    weight?: string;
+  };
+  notes?: string;
+  created_at: string;
+}
+
+// IPD Types
+export type IPDStatus = 'admitted' | 'in_progress' | 'discharged' | 'transferred';
+
+export interface IPDAdmission {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_phone: string;
+  patient_age: number;
+  patient_gender: string;
+  doctor_id: string;
+  doctor_name: string;
+  department_id: string;
+  department_name: string;
+  room_number: string;
+  bed_number: string;
+  admission_date: string;
+  admission_time: string;
+  discharge_date?: string;
+  diagnosis: string;
+  treatment_plan?: string;
+  status: IPDStatus;
+  notes?: string;
+  created_at: string;
+}
+
+// Radiology Types
+export type RadiologyStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type RadiologyType = 'xray' | 'ultrasound' | 'ct_scan' | 'mri' | 'mammography' | 'angiography' | 'other';
+
+export interface RadiologyRequest {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_age: number;
+  patient_gender: string;
+  doctor_id: string;
+  doctor_name: string;
+  radiology_type: RadiologyType;
+  examination: string;
+  clinical_history?: string;
+  status: RadiologyStatus;
+  appointment_date?: string;
+  appointment_time?: string;
+  report?: string;
+  findings?: string;
+  impression?: string;
+  radiologist_notes?: string;
+  completed_at?: string;
+  created_at: string;
+}
+
+export interface KnowledgeArticle {
+  id: string;
+  title: string;
+  category: 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
+  tags: string[];
+  content: string;
+  author_id: string;
+  author_name: string;
+  status: 'draft' | 'review' | 'approved' | 'archived';
+  version: number;
+  created_at: string;
+  updated_at: string;
+  views: number;
+  department_id?: string;
+}
+
+// Billing Types
+
+export type BillingStatus = 'pending' | 'paid' | 'partial' | 'cancelled' | 'refunded';
+export type BillingType = 'consultation' | 'laboratory' | 'radiology' | 'pharmacy' | 'ipd' | 'procedure' | 'other';
+
+export interface BillingInvoice {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_phone: string;
+  invoice_number: string;
+  billing_type: BillingType;
+  items: BillingItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  amount_paid: number;
+  status: BillingStatus;
+  due_date?: string;
+  paid_at?: string;
+  created_at: string;
+}
+
+export interface BillingItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+export interface Document {
+  id: string;
+  title: string;
+  filename: string;
+  category: 'protocol' | 'guideline' | 'sop' | 'manual' | 'training' | 'report';
+  size: string;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_by_name: string;
+  status: 'active' | 'archived' | 'draft';
+  uploaded_at: string;
+  views: number;
+  downloads: number;
+  tags: string[];
+  department_id?: string;
+}
+

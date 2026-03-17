@@ -7,6 +7,12 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { AppLayout } from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import PatientsPage from "./pages/PatientsPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
+import LaboratoryPage from "./pages/LaboratoryPage";
+import PharmacyPage from "./pages/PharmacyPage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
 import UserForm from "./pages/UserForm";
 import DepartmentsPage from "./pages/DepartmentsPage";
@@ -14,7 +20,14 @@ import TasksPage from "./pages/TasksPage";
 import TaskForm from "./pages/TaskForm";
 import InventoryPage from "./pages/InventoryPage";
 import InventoryForm from "./pages/InventoryForm";
+import DocumentsPage from "./pages/Documents";
 import NotFound from "./pages/NotFound";
+import KnowledgeBase from "./pages/KnowledgeBase";
+import KnowledgeArticlePage from "./pages/KnowledgeArticle";
+import CreateKnowledge from "./pages/CreateKnowledge";
+import Wiki from "./pages/Wiki";
+import DocumentForm from "./pages/DocumentForm";
+import EditKnowledge from "./pages/EditKnowledge";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +45,16 @@ const App = () => (
             {/* Protected routes */}
             <Route element={<AppLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/patients" element={<PatientsPage />} />
+              <Route path="/patients/create" element={<PatientsPage />} />
+              <Route path="/patients/:id/edit" element={<PatientsPage />} />
+              <Route path="/appointments" element={<AppointmentsPage />} />
+              <Route path="/appointments/create" element={<AppointmentsPage />} />
+              <Route path="/appointments/:id/edit" element={<AppointmentsPage />} />
+              <Route path="/laboratory" element={<LaboratoryPage />} />
+              <Route path="/pharmacy" element={<PharmacyPage />} />
+              <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/users" element={<UsersPage />} />
               <Route path="/users/create" element={<UserForm />} />
               <Route path="/users/:id/edit" element={<UserForm />} />
@@ -42,9 +65,18 @@ const App = () => (
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/inventory/create" element={<InventoryForm />} />
               <Route path="/inventory/:id/edit" element={<InventoryForm />} />
+              <Route path="/knowledge" element={<KnowledgeBase />} />
+              <Route path="/knowledge/create" element={<CreateKnowledge />} />
+              <Route path="/knowledge/:id" element={<KnowledgeArticlePage />} />
+              <Route path="/knowledge/:id/edit" element={<EditKnowledge />} />
+              <Route path="/wiki" element={<Wiki />} />
+              <Route path="/documents" element={<DocumentsPage />} />
+              <Route path="/documents/create" element={<DocumentForm />} />
+              <Route path="/documents/:id/edit" element={<DocumentForm />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
+
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
@@ -53,3 +85,4 @@ const App = () => (
 );
 
 export default App;
+

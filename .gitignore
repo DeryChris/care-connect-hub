@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 
+
 /img
 AI_PROMPT_HMIS.md
 TODO.md

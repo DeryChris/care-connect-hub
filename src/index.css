@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -22,7 +22,7 @@
     --secondary-foreground: 220 20% 14%;
 
     --muted: 86 30% 90%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 35%;
 
     --accent: 150 40% 70%;
     --accent-foreground: 220 20% 14%;
@@ -34,7 +34,7 @@
     --input: 150 20% 82%;
     --ring: 168 35% 51%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 109 45% 88%;
     --sidebar-foreground: 220 20% 14%;
@@ -45,8 +45,9 @@
     --sidebar-border: 150 25% 78%;
     --sidebar-ring: 168 35% 51%;
 
-    --success: 109 45% 88%;
-    --success-foreground: 168 50% 30%;
+    /* Improved success colors - brighter for visibility */
+    --success: 150 60% 45%;
+    --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 210 80% 52%;
@@ -98,19 +99,45 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
+
+  /* Improve scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
+  }
 }
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-xl border p-6 shadow-sm transition-all duration-200 hover:shadow-md;
+    @apply bg-card rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
   }
 
   .page-header {
@@ -123,10 +150,116 @@
   }
 
   .filter-bar {
-    @apply flex flex-wrap items-center gap-3 rounded-lg bg-card p-4 border shadow-sm;
+    @apply flex flex-wrap items-center gap-3 rounded-xl bg-card p-4 border shadow-sm;
   }
 
   .stock-bar {
     @apply h-2 rounded-full;
   }
+
+  /* Improved card styling with rounded corners */
+  .card {
+    @apply rounded-2xl border shadow-sm;
+  }
+
+  /* Better button rounded corners */
+  .btn {
+    @apply rounded-lg transition-all duration-200;
+  }
+
+  /* Improved input styling */
+  .input {
+    @apply rounded-lg border-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+  }
+
+  /* Dialog/modal overlay improvements */
+  .dialog-overlay {
+    @apply backdrop-blur-sm;
+  }
+
+  /* Table row hover effects */
+  .table-row-hover {
+    @apply transition-colors duration-150 hover:bg-primary/5;
+  }
+
+  /* Badge improvements for visibility */
+  .badge-success {
+    @apply bg-emerald-500 text-white font-medium;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-500 text-white font-medium;
+  }
+
+  /* Mobile-friendly touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Smooth page transitions */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Fluid container */
+  .container-fluid {
+    @apply w-full px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Better modal styling */
+  .modal-content {
+    @apply rounded-2xl shadow-2xl border-0;
+  }
+
+  /* Sidebar improvements */
+  .sidebar-item {
+    @apply rounded-xl transition-all duration-200 hover:bg-primary/10;
+  }
+
+  .sidebar-item-active {
+    @apply bg-primary text-primary-foreground shadow-md;
+  }
 }
+
+/* Utility for visible text on colored backgrounds */
+.text-on-primary {
+  color: hsl(var(--primary-foreground));
+}
+
+.text-on-success {
+  color: hsl(var(--success-foreground));
+}
+
+.text-on-warning {
+  color: hsl(var(--warning-foreground));
+}
+
+/* Dark mode text improvements */
+.dark .text-muted-foreground {
+  color: hsl(var(--muted-foreground) / 0.8);
+}
+
+/* Ensure proper text contrast */
+.text-success-bright {
+  @apply text-emerald-600 dark:text-emerald-400 font-medium;
+}
+
+.text-warning-bright {
+  @apply text-amber-600 dark:text-amber-400 font-medium;
+}
+
+.text-info-bright {
+  @apply text-blue-600 dark:text-blue-400 font-medium;
+}
+

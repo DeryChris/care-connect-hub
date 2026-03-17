@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Building2, ClipboardList, Package,
   UserCog, CalendarDays, Stethoscope, FlaskConical, Scan,
-  Pill, BedDouble, Receipt, BarChart3, Settings, Heart
+  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText, PenLine
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -17,30 +17,33 @@ const mainNav = [
 ];
 
 const clinicalNav = [
-  { title: 'Patients', url: '/patients', icon: Heart, placeholder: true },
-  { title: 'Appointments', url: '/appointments', icon: CalendarDays, placeholder: true },
-  { title: 'OPD', url: '/opd', icon: Stethoscope, placeholder: true },
-  { title: 'IPD', url: '/ipd', icon: BedDouble, placeholder: true },
+  { title: 'Patients', url: '/patients', icon: Heart },
+  { title: 'Appointments', url: '/appointments', icon: CalendarDays },
+  { title: 'OPD', url: '/opd', icon: Stethoscope },
+  { title: 'IPD', url: '/ipd', icon: BedDouble },
   { title: 'Doctors & Staff', url: '/users?filter=doctor', icon: Users },
   { title: 'Departments', url: '/departments', icon: Building2 },
 ];
 
 const supportNav = [
-  { title: 'Laboratory', url: '/laboratory', icon: FlaskConical, placeholder: true },
-  { title: 'Radiology', url: '/radiology', icon: Scan, placeholder: true },
-  { title: 'Pharmacy', url: '/pharmacy', icon: Pill, placeholder: true },
-  { title: 'Billing', url: '/billing', icon: Receipt, placeholder: true },
-  { title: 'Reports', url: '/reports', icon: BarChart3, placeholder: true },
+  { title: 'Laboratory', url: '/laboratory', icon: FlaskConical },
+  { title: 'Radiology', url: '/radiology', icon: Scan },
+  { title: 'Pharmacy', url: '/pharmacy', icon: Pill },
+  { title: 'Billing', url: '/billing', icon: Receipt },
+  { title: 'Reports', url: '/reports', icon: BarChart3 },
 ];
 
 const managementNav = [
   { title: 'Task Management', url: '/tasks', icon: ClipboardList },
   { title: 'Inventory', url: '/inventory', icon: Package },
+  { title: 'Documents', url: '/documents', icon: FileText },
+  { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen },
+  { title: 'Wiki', url: '/wiki', icon: PenLine },
 ];
 
 const adminNav = [
   { title: 'User Management', url: '/users', icon: UserCog },
-  { title: 'Settings', url: '/settings', icon: Settings, placeholder: true },
+  { title: 'Settings', url: '/settings', icon: Settings },
 ];
 
 interface NavItem {
