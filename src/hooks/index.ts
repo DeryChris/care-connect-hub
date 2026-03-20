@@ -21,3 +21,4 @@ export * from './useSearch';
 export * from './useDashboard';
 export * from './useReports';
 export * from './useSettings';
+export * from './useDocumentBlobUrl';

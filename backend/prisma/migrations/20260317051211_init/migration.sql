@@ -629,3 +629,10 @@ ALTER TABLE "WikiPage" ADD CONSTRAINT "WikiPage_author_id_fkey" FOREIGN KEY ("au
 
 -- AddForeignKey
 ALTER TABLE "ContentComment" ADD CONSTRAINT "ContentComment_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Add markdown content field to Document table
+-- This allows documents to have rich markdown body content written inline
+-- in the browser, in addition to optional file attachments.
+-- The field is nullable so existing documents with only file_path still work.
+
+ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT;

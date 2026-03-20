@@ -13,35 +13,58 @@ export const DESIGNATIONS = [
   { value: 'employee', label: 'Employee' },
 ] as const;
 
-export const MODULES = [
-  { key: 'general', label: 'General', icon: 'LayoutDashboard' },
-  { key: 'registration', label: 'Registration', icon: 'UserPlus' },
-  { key: 'appointment', label: 'Appointment', icon: 'CalendarDays' },
-  { key: 'laboratory', label: 'Laboratory', icon: 'FlaskConical' },
-  { key: 'radiology', label: 'Radiology', icon: 'Scan' },
-  { key: 'pharmacy', label: 'Pharmacy', icon: 'Pill' },
-  { key: 'ipd', label: 'IPD', icon: 'BedDouble' },
-  { key: 'opd', label: 'OPD', icon: 'Stethoscope' },
-  { key: 'billing', label: 'Billing', icon: 'Receipt' },
-  { key: 'hr', label: 'HR', icon: 'Users' },
-  { key: 'reports', label: 'Reports', icon: 'BarChart3' },
-  { key: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
-  { key: 'inventory', label: 'Inventory', icon: 'Package' },
-  { key: 'it', label: 'IT', icon: 'Monitor' },
+// ── HMIS Module permissions ───────────────────────────────────────────────────
+export const HMIS_MODULES = [
+  { key: 'general',      label: 'General / Dashboard', icon: 'LayoutDashboard', group: 'HMIS' },
+  { key: 'registration', label: 'Patient Registration', icon: 'UserPlus',       group: 'HMIS' },
+  { key: 'appointment',  label: 'Appointments',         icon: 'CalendarDays',   group: 'HMIS' },
+  { key: 'opd',          label: 'OPD',                  icon: 'Stethoscope',    group: 'HMIS' },
+  { key: 'ipd',          label: 'IPD',                  icon: 'BedDouble',      group: 'HMIS' },
+  { key: 'laboratory',   label: 'Laboratory',           icon: 'FlaskConical',   group: 'HMIS' },
+  { key: 'radiology',    label: 'Radiology',            icon: 'Scan',           group: 'HMIS' },
+  { key: 'pharmacy',     label: 'Pharmacy',             icon: 'Pill',           group: 'HMIS' },
+  { key: 'billing',      label: 'Billing',              icon: 'Receipt',        group: 'HMIS' },
+  { key: 'inventory',    label: 'Inventory',            icon: 'Package',        group: 'HMIS' },
+  { key: 'tasks',        label: 'Tasks',                icon: 'CheckSquare',    group: 'HMIS' },
+  { key: 'hr',           label: 'HR',                   icon: 'Users',          group: 'HMIS' },
+  { key: 'reports',      label: 'Reports',              icon: 'BarChart3',      group: 'HMIS' },
+  { key: 'it',           label: 'IT / Settings',        icon: 'Monitor',        group: 'HMIS' },
 ] as const;
 
+// ── KMS Permission modules ────────────────────────────────────────────────────
+// These control what a user can do inside the Knowledge Management System.
+export const KMS_MODULES = [
+  { key: 'kms_read',       label: 'KMS — View Articles & Docs',    icon: 'BookOpen',    group: 'KMS' },
+  { key: 'kms_create',     label: 'KMS — Create Articles & Docs',  icon: 'FilePlus',    group: 'KMS' },
+  { key: 'kms_edit',       label: 'KMS — Edit Own Articles & Docs', icon: 'Pencil',     group: 'KMS' },
+  { key: 'kms_review',     label: 'KMS — Review Content',          icon: 'ClipboardCheck', group: 'KMS' },
+  { key: 'kms_approve',    label: 'KMS — Approve Content',         icon: 'CheckCircle', group: 'KMS' },
+  { key: 'kms_disapprove', label: 'KMS — Reject / Disapprove',     icon: 'XCircle',     group: 'KMS' },
+  { key: 'kms_archive',    label: 'KMS — Archive Content',         icon: 'Archive',     group: 'KMS' },
+  { key: 'kms_delete',     label: 'KMS — Delete Own Content',      icon: 'Trash2',      group: 'KMS' },
+  { key: 'kms_wiki_edit',  label: 'KMS — Edit Wiki Pages',         icon: 'FileEdit',    group: 'KMS' },
+] as const;
+
+// Combined for the UserForm permissions section
+export const MODULES = [...HMIS_MODULES, ...KMS_MODULES] as const;
+
+// Type helpers
+export type HMISModuleKey = typeof HMIS_MODULES[number]['key'];
+export type KMSModuleKey  = typeof KMS_MODULES[number]['key'];
+export type ModuleKey     = typeof MODULES[number]['key'];
+
 export const PRIORITIES = [
-  { value: 'low', label: 'Low', color: 'bg-muted text-muted-foreground' },
+  { value: 'low',    label: 'Low',    color: 'bg-muted text-muted-foreground' },
   { value: 'medium', label: 'Medium', color: 'bg-info text-info-foreground' },
-  { value: 'high', label: 'High', color: 'bg-warning text-warning-foreground' },
+  { value: 'high',   label: 'High',   color: 'bg-warning text-warning-foreground' },
   { value: 'urgent', label: 'Urgent', color: 'bg-destructive text-destructive-foreground' },
 ] as const;
 
 export const TASK_STATUSES = [
-  { value: 'pending', label: 'Pending' },
+  { value: 'pending',     label: 'Pending' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'completed',   label: 'Completed' },
+  { value: 'cancelled',   label: 'Cancelled' },
 ] as const;
 
 export const INVENTORY_CATEGORIES = [
@@ -53,10 +76,10 @@ export const INVENTORY_UNITS = [
   'pcs', 'box', 'bottle', 'pack', 'roll', 'kg', 'liter', 'tube', 'vial', 'strip',
 ] as const;
 
-export type UserRole = 'admin' | 'user';
+export type UserRole    = 'admin' | 'user';
 export type Designation = typeof DESIGNATIONS[number]['value'];
-export type Priority = typeof PRIORITIES[number]['value'];
-export type TaskStatus = typeof TASK_STATUSES[number]['value'];
+export type Priority    = typeof PRIORITIES[number]['value'];
+export type TaskStatus  = typeof TASK_STATUSES[number]['value'];
 
 export interface User {
   id: string;
@@ -127,7 +150,6 @@ export interface InventoryTransaction {
   created_at: string;
 }
 
-// Patient types
 export interface Patient {
   id: string;
   name: string;
@@ -146,9 +168,8 @@ export interface Patient {
   created_at: string;
 }
 
-// Appointment types
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-export type AppointmentType = 'consultation' | 'followup' | 'emergency' | 'checkup';
+export type AppointmentType   = 'consultation' | 'followup' | 'emergency' | 'checkup';
 
 export interface Appointment {
   id: string;
@@ -167,7 +188,6 @@ export interface Appointment {
   created_at: string;
 }
 
-// Laboratory types
 export type LabTestStatus = 'pending' | 'sample_collected' | 'processing' | 'completed' | 'cancelled';
 export type LabTestResult = 'normal' | 'abnormal' | 'critical';
 
@@ -191,7 +211,6 @@ export interface LaboratoryTest {
   created_at: string;
 }
 
-// Pharmacy types
 export interface PharmacyItem {
   id: string;
   name: string;
@@ -213,60 +232,47 @@ export interface PharmacyItem {
 }
 
 export const APPOINTMENT_STATUSES = [
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'scheduled',   label: 'Scheduled' },
+  { value: 'confirmed',   label: 'Confirmed' },
   { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'no_show', label: 'No Show' },
+  { value: 'completed',   label: 'Completed' },
+  { value: 'cancelled',   label: 'Cancelled' },
+  { value: 'no_show',     label: 'No Show' },
 ] as const;
 
 export const APPOINTMENT_TYPES = [
   { value: 'consultation', label: 'Consultation' },
-  { value: 'followup', label: 'Follow-up' },
-  { value: 'emergency', label: 'Emergency' },
-  { value: 'checkup', label: 'Check-up' },
+  { value: 'followup',     label: 'Follow-up' },
+  { value: 'emergency',    label: 'Emergency' },
+  { value: 'checkup',      label: 'Check-up' },
 ] as const;
 
 export const GENDERS = [
-  { value: 'male', label: 'Male' },
+  { value: 'male',   label: 'Male' },
   { value: 'female', label: 'Female' },
-  { value: 'other', label: 'Other' },
+  { value: 'other',  label: 'Other' },
 ] as const;
 
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
 export const LAB_TEST_STATUSES = [
-  { value: 'pending', label: 'Pending' },
+  { value: 'pending',          label: 'Pending' },
   { value: 'sample_collected', label: 'Sample Collected' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'processing',       label: 'Processing' },
+  { value: 'completed',        label: 'Completed' },
+  { value: 'cancelled',        label: 'Cancelled' },
 ] as const;
 
 export const LAB_TEST_CATEGORIES = [
-  'Hematology',
-  'Biochemistry',
-  'Microbiology',
-  'Serology',
-  'Pathology',
-  'Radiology',
-  'Other',
+  'Hematology', 'Biochemistry', 'Microbiology',
+  'Serology', 'Pathology', 'Radiology', 'Other',
 ] as const;
 
 export const PHARMACY_CATEGORIES = [
-  'Medicine',
-  'Injection',
-  'Syrup',
-  'Cream',
-  'Drops',
-  'Inhaler',
-  'Surgical Supply',
-  'Consumable',
-  'Other',
+  'Medicine', 'Injection', 'Syrup', 'Cream', 'Drops',
+  'Inhaler', 'Surgical Supply', 'Consumable', 'Other',
 ] as const;
 
-// OPD Types
 export type OPDStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface OPDVisit {
@@ -294,7 +300,6 @@ export interface OPDVisit {
   created_at: string;
 }
 
-// IPD Types
 export type IPDStatus = 'admitted' | 'in_progress' | 'discharged' | 'transferred';
 
 export interface IPDAdmission {
@@ -320,9 +325,8 @@ export interface IPDAdmission {
   created_at: string;
 }
 
-// Radiology Types
 export type RadiologyStatus = 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-export type RadiologyType = 'xray' | 'ultrasound' | 'ct_scan' | 'mri' | 'mammography' | 'angiography' | 'other';
+export type RadiologyType   = 'xray' | 'ultrasound' | 'ct_scan' | 'mri' | 'mammography' | 'angiography' | 'other';
 
 export interface RadiologyRequest {
   id: string;
@@ -354,7 +358,7 @@ export interface KnowledgeArticle {
   content: string;
   author_id: string;
   author_name: string;
-  status: 'draft' | 'review' | 'approved' | 'archived';
+  status: 'draft' | 'review' | 'approved' | 'rejected' | 'archived';
   version: number;
   created_at: string;
   updated_at: string;
@@ -362,10 +366,8 @@ export interface KnowledgeArticle {
   department_id?: string;
 }
 
-// Billing Types
-
 export type BillingStatus = 'pending' | 'paid' | 'partial' | 'cancelled' | 'refunded';
-export type BillingType = 'consultation' | 'laboratory' | 'radiology' | 'pharmacy' | 'ipd' | 'procedure' | 'other';
+export type BillingType   = 'consultation' | 'laboratory' | 'radiology' | 'pharmacy' | 'ipd' | 'procedure' | 'other';
 
 export interface BillingInvoice {
   id: string;
@@ -398,16 +400,17 @@ export interface Document {
   id: string;
   title: string;
   filename: string;
+  file_path?: string;
   category: 'protocol' | 'guideline' | 'sop' | 'manual' | 'training' | 'report';
   size: string;
   mime_type: string;
   uploaded_by: string;
   uploaded_by_name: string;
-  status: 'active' | 'archived' | 'draft';
+  status: 'draft' | 'review' | 'approved' | 'rejected' | 'archived';
   uploaded_at: string;
+  updated_at?: string;
   views: number;
   downloads: number;
   tags: string[];
   department_id?: string;
 }
-

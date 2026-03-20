@@ -549,11 +549,12 @@ model KnowledgeArticle {
 model Document {
   id            String          @id @default(uuid())
   title         String
-  filename      String
-  file_path     String          // S3 key or local file path — never expose raw to frontend
+  filename      String          @default("")
+  file_path     String          @default("")  // S3 key or local file path — empty for markdown-only docs
+  content       String?         @db.Text      // Optional markdown body content (alternative to file upload)
   category      DocumentCategory
-  size          String          // human readable e.g. "1.2 MB"
-  mime_type     String
+  size          String          @default("0 B")  // human readable e.g. "1.2 MB"
+  mime_type     String          @default("text/markdown")
   uploaded_by   String
   uploaded_by_name String
   status        ContentStatus   @default(draft)
