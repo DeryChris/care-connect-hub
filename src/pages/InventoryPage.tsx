@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+// src/pages/InventoryPage.tsx
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,231 +7,202 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Edit, Trash2, Package, AlertTriangle, TrendingUp, Clock, ArrowDownToLine, ArrowUpFromLine, Settings2 } from 'lucide-react';
-import { mockInventory } from '@/lib/mock-data';
-import { INVENTORY_CATEGORIES, InventoryItem } from '@/lib/constants';
+import { Plus, Search, Edit, Package, AlertTriangle, TrendingUp, Clock, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { INVENTORY_CATEGORIES } from '@/lib/constants';
+import { useInventory, useProcessInventoryTransaction, useDeleteInventoryItem } from '@/hooks';
 import { useSettings } from '@/contexts/SettingsContext';
 
 const InventoryPage = () => {
-  const [items, setItems] = useState<InventoryItem[]>(mockInventory);
+  const { formatCurrency } = useSettings();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [txDialog, setTxDialog] = useState<{ item: InventoryItem; type: 'in' | 'out' | 'adjustment' } | null>(null);
+  const [page, setPage] = useState(1);
+  const [txDialog, setTxDialog] = useState<{ id: string; name: string; type: 'in' | 'out' | 'adjustment' } | null>(null);
   const [txQty, setTxQty] = useState('');
-  const { formatCurrency } = useSettings();
 
-  const filtered = useMemo(() => {
-    return items.filter(i => {
-      const matchSearch = !search || i.name.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = categoryFilter === 'all' || i.category === categoryFilter;
-      const matchStock = stockFilter === 'all' || (stockFilter === 'low' ? i.quantity <= i.min_quantity : i.quantity > i.min_quantity);
-      return matchSearch && matchCategory && matchStock;
-    });
-  }, [items, search, categoryFilter, stockFilter]);
+  const { data, isLoading } = useInventory({
+    search: search || undefined,
+    category: categoryFilter !== 'all' ? categoryFilter : undefined,
+    low_stock: stockFilter === 'low' ? true : undefined,
+    page,
+    limit: 15,
+  });
 
-  // Stats
-  const totalItems = items.length;
-  const lowStockCount = items.filter(i => i.quantity <= i.min_quantity).length;
+  const items = data?.data ?? [];
+  const meta = data?.meta;
   const totalValue = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
-  const expiringCount = items.filter(i => {
-    if (!i.expiry_date) return false;
-    const diff = new Date(i.expiry_date).getTime() - Date.now();
-    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
-  }).length;
+  const lowStockCount = items.filter(i => i.quantity <= i.min_quantity).length;
+  const soon = new Date(); soon.setDate(soon.getDate() + 30);
+  const expiringCount = items.filter(i => i.expiry_date && new Date(i.expiry_date) <= soon && new Date(i.expiry_date) > new Date()).length;
 
-  const stats = [
-    { label: 'Total Items', value: totalItems, icon: Package, color: 'text-primary', bg: 'bg-primary/10' },
-    { label: 'Low Stock', value: lowStockCount, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
-    { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-100 dark:bg-emerald-900' },
-    { label: 'Expiring (30d)', value: expiringCount, icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
-  ];
+  const processTransaction = useProcessInventoryTransaction();
 
-  const processTransaction = () => {
-    if (!txDialog || !txQty) return;
-    const qty = parseInt(txQty);
-    if (isNaN(qty) || qty <= 0) return;
-
-    setItems(prev => prev.map(i => {
-      if (i.id !== txDialog.item.id) return i;
-      if (txDialog.type === 'in') return { ...i, quantity: i.quantity + qty };
-      if (txDialog.type === 'out') return { ...i, quantity: Math.max(0, i.quantity - qty) };
-      return { ...i, quantity: qty }; // adjustment
-    }));
-    setTxDialog(null);
-    setTxQty('');
-  };
-
-  const deleteItem = (id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
-    setDeleteId(null);
-  };
-
-  const getStockLevel = (item: InventoryItem) => {
+  const getStockLevel = (item: any) => {
     const ratio = item.min_quantity > 0 ? item.quantity / item.min_quantity : 1;
-    if (ratio <= 0.5) return { color: 'bg-destructive', width: Math.max(10, ratio * 100) };
-    if (ratio <= 1) return { color: 'bg-warning', width: Math.max(20, ratio * 100) };
-    return { color: 'bg-primary', width: Math.min(100, ratio * 50) };
+    if (ratio <= 0.5) return { color: 'bg-destructive', label: 'Critical', badgeColor: 'bg-destructive text-destructive-foreground' };
+    if (ratio <= 1) return { color: 'bg-warning', label: 'Low', badgeColor: 'bg-warning text-warning-foreground' };
+    return { color: 'bg-success', label: 'OK', badgeColor: 'bg-success text-success-foreground' };
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Inventory Management</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} items</p>
+          <h1 className="page-title">Inventory</h1>
+          <p className="text-sm text-muted-foreground">Hospital supply and equipment management</p>
         </div>
         <Link to="/inventory/create">
           <Button><Plus className="h-4 w-4 mr-2" />Add Item</Button>
         </Link>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map(stat => (
-          <Card key={stat.label} className="stat-card">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold font-display text-foreground">{stat.value}</p>
-                </div>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg}`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
+        {[
+          { label: 'Total Items', value: meta?.total ?? 0, icon: Package, color: 'text-primary', bg: 'bg-primary/10' },
+          { label: 'Low Stock', value: lowStockCount, icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10' },
+          { label: 'Total Value', value: formatCurrency(totalValue), icon: TrendingUp, color: 'text-success', bg: 'bg-success/10' },
+          { label: 'Expiring (30d)', value: expiringCount, icon: Clock, color: 'text-warning', bg: 'bg-warning/10' },
+        ].map(stat => (
+          <Card key={stat.label} className="stat-card"><CardContent className="p-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="mt-1 text-2xl font-bold font-display">{stat.value}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg}`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              </div>
+            </div>
+          </CardContent></Card>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="filter-bar">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search items..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+      <Card><CardContent className="p-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search items..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-10" />
+          </div>
+          <Select value={categoryFilter} onValueChange={v => { setCategoryFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {INVENTORY_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={stockFilter} onValueChange={v => { setStockFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Stock" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stock</SelectItem>
+              <SelectItem value="low">Low Stock</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[170px]"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {INVENTORY_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={stockFilter} onValueChange={setStockFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Stock" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Stock</SelectItem>
-            <SelectItem value="low">Low Stock</SelectItem>
-            <SelectItem value="ok">In Stock</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      </CardContent></Card>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-primary/5">
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Unit Price</TableHead>
-                <TableHead>Supplier</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map(item => {
-                const stock = getStockLevel(item);
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <span className={`text-sm ${item.quantity <= item.min_quantity ? 'text-destructive font-medium' : ''}`}>
-                          {item.quantity} {item.unit}
-                        </span>
-                        <div className="h-1.5 w-16 rounded-full bg-muted">
-                          <div className={`h-full rounded-full ${stock.color}`} style={{ width: `${stock.width}%` }} />
+      <Card><CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Item</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Quantity</TableHead>
+              <TableHead>Unit Price</TableHead>
+              <TableHead>Expiry</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                ))
+              : items.map(item => {
+                  const stock = getStockLevel(item);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">{item.location}</div>
+                      </TableCell>
+                      <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">{item.quantity} {item.unit}</div>
+                            <div className="text-xs text-muted-foreground">Min: {item.min_quantity}</div>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatCurrency(item.unit_price)}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.supplier || '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.expiry_date || '—'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="Stock In" onClick={() => setTxDialog({ item, type: 'in' })}>
-                          <ArrowDownToLine className="h-4 w-4 text-primary" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Stock Out" onClick={() => setTxDialog({ item, type: 'out' })}>
-                          <ArrowUpFromLine className="h-4 w-4 text-warning" />
-                        </Button>
-                        <Button variant="ghost" size="icon" title="Adjust" onClick={() => setTxDialog({ item, type: 'adjustment' })}>
-                          <Settings2 className="h-4 w-4" />
-                        </Button>
-                        <Link to={`/inventory/${item.id}/edit`}>
-                          <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
-                        </Link>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(item.id)} className="hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No items found.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                      </TableCell>
+                      <TableCell className="text-sm">{formatCurrency(item.unit_price)}</TableCell>
+                      <TableCell className="text-sm">
+                        {item.expiry_date
+                          ? new Date(item.expiry_date) < new Date()
+                            ? <span className="text-destructive">{item.expiry_date} (Expired)</span>
+                            : item.expiry_date
+                          : <span className="text-muted-foreground">—</span>
+                        }
+                      </TableCell>
+                      <TableCell><Badge className={stock.badgeColor}>{stock.label}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Link to={`/inventory/${item.id}/edit`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-3.5 w-3.5" /></Button>
+                          </Link>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Stock In"
+                            onClick={() => { setTxDialog({ id: item.id, name: item.name, type: 'in' }); setTxQty(''); }}>
+                            <ArrowDownToLine className="h-3.5 w-3.5 text-success" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Stock Out"
+                            onClick={() => { setTxDialog({ id: item.id, name: item.name, type: 'out' }); setTxQty(''); }}>
+                            <ArrowUpFromLine className="h-3.5 w-3.5 text-warning" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+            }
+            {!isLoading && items.length === 0 && (
+              <TableRow><TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No items found.</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent></Card>
 
-      {/* Transaction Dialog */}
-      <Dialog open={!!txDialog} onOpenChange={() => { setTxDialog(null); setTxQty(''); }}>
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+          <span className="px-3 py-1 text-sm text-muted-foreground bg-card rounded-md">Page {page} of {meta.totalPages}</span>
+          <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(meta.totalPages, p + 1))} disabled={page === meta.totalPages}>Next</Button>
+        </div>
+      )}
+
+      <Dialog open={!!txDialog} onOpenChange={() => setTxDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {txDialog?.type === 'in' ? 'Stock In' : txDialog?.type === 'out' ? 'Stock Out' : 'Stock Adjustment'}
-              {txDialog && ` — ${txDialog.item.name}`}
-            </DialogTitle>
-            <DialogDescription>
-              Current stock: {txDialog?.item.quantity} {txDialog?.item.unit}
-              {txDialog?.type === 'adjustment' && ' (enter the new total quantity)'}
-            </DialogDescription>
+            <DialogTitle>{txDialog?.type === 'in' ? 'Stock In' : 'Stock Out'} — {txDialog?.name}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="tx-qty">Quantity *</Label>
-              <Input id="tx-qty" type="number" min={1} value={txQty} onChange={e => setTxQty(e.target.value)} placeholder="Enter quantity" />
+              <Label>Quantity *</Label>
+              <Input type="number" min="1" placeholder="Enter quantity" value={txQty} onChange={e => setTxQty(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setTxDialog(null); setTxQty(''); }}>Cancel</Button>
-            <Button onClick={processTransaction}>Confirm</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Item</DialogTitle>
-            <DialogDescription>Are you sure?</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteId && deleteItem(deleteId)}>Delete</Button>
+            <Button variant="outline" onClick={() => setTxDialog(null)}>Cancel</Button>
+            <Button onClick={() => {
+              if (txDialog && txQty) {
+                processTransaction.mutate({ id: txDialog.id, type: txDialog.type, quantity: parseInt(txQty) }, {
+                  onSuccess: () => setTxDialog(null),
+                });
+              }
+            }} disabled={!txQty || processTransaction.isPending}>Confirm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

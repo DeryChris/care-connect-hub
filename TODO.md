@@ -59,5 +59,13 @@
 [ ] Knowledge gaps identification
 ```
 
-**Next Sprint**: Documents Module → Phase 1 100% complete!
-
+### Other tasks
+[] there are some errors in the Documents.tsx file on line 81 and 82
+[] when i refresh on any page it takes me back to the login page
+[] when i try uploading a document from the documents page, it takes me to a blank page
+[] make the pdfs or documents viewable on the document view page and also editable.
+[] in the knowledge base page, make the articles editable and also make the ability to add new article functionable
+[] improve the the page for creating new and editing pages in the wiki section
+[] in the user management section when i try to edit the admins details, it gives me an HTTP 500 error 
+[] the IPD, OPD, Radiology, and Billing pages are not working
+[] restructure the functionalities to create, edit, delete, review, approve, archieve, disprove an article/document/wiki or page in the kms part of the system - i want you to add these functionalities as module permissions in the user management section when adding a new user or editting a user's data
