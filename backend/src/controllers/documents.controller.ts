@@ -2,12 +2,6 @@
 // Supports two document modes:
 //   1. File upload  — PDF, Word, etc. stored on disk
 //   2. Markdown     — content written inline via MDEditor, no file needed
-//
-// NOTE: The `content` field is added by the migration
-// (20260320000000_document_content). Run `npx prisma migrate dev` or the raw
-// SQL first, then `npx prisma generate`, before building the backend.
-// Until then the TypeScript types won't include `content` — hence we use
-// `as any` on the data objects to avoid compile errors during that window.
 
 import { Request, Response } from 'express';
 import path from 'path';
@@ -42,7 +36,6 @@ export async function list(req: Request, res: Response) {
       skip,
       take:    limit,
       orderBy: { uploaded_at: 'desc' },
-      // No `select` — return all fields including `content` once migration runs
     }),
   ]);
 
@@ -70,7 +63,10 @@ export async function getOne(req: Request, res: Response) {
 export async function create(req: Request, res: Response) {
   if (!req.user) return notFound(res, 'User');
 
-  const { title, category, department_id, tags, content } = req.body;
+  // FIX: destructure `status` from req.body so the frontend can control it.
+  // Previously it was hardcoded to 'draft', ignoring the value sent by the
+  // client (e.g. when the user clicks "Submit for Review" which sends 'review').
+  const { title, category, department_id, tags, content, status } = req.body;
 
   // ── Markdown-only mode (no file uploaded) ────────────────────────────────
   if (!req.file) {
@@ -87,7 +83,7 @@ export async function create(req: Request, res: Response) {
         mime_type:        'text/markdown',
         uploaded_by:      req.user.userId,
         uploaded_by_name: req.user.name,
-        status:           'draft',
+        status:           status || 'draft',   // use the value from the client
         tags:             tags ? JSON.parse(tags) : [],
         department_id:    department_id || null,
       },
@@ -108,7 +104,7 @@ export async function create(req: Request, res: Response) {
       mime_type:        req.file.mimetype,
       uploaded_by:      req.user.userId,
       uploaded_by_name: req.user.name,
-      status:           'draft',
+      status:           status || 'draft',   // use the value from the client
       tags:             tags ? JSON.parse(tags) : [],
       department_id:    department_id || null,
     },

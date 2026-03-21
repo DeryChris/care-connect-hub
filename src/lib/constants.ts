@@ -401,6 +401,7 @@ export interface Document {
   title: string;
   filename: string;
   file_path?: string;
+  content?: string;
   category: 'protocol' | 'guideline' | 'sop' | 'manual' | 'training' | 'report';
   size: string;
   mime_type: string;
