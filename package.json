@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "start": "node start.cjs",
+    "dev": "vite --host",
+    "frontend": "vite --host",
+    "backend": "npm run dev --prefix backend",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

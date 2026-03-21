@@ -11,6 +11,7 @@ import path from "path";
 
 export default defineConfig(({ mode }) => ({
   server: {
+    host: true,   // bind to 0.0.0.0 so the app is reachable on the local network
     port: 5173,
     proxy: {
       '/api': {
