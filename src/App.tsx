@@ -10,8 +10,12 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import PatientsPage from "./pages/PatientsPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
+import OPDPage from "./pages/OPDPage";
+import IPDPage from "./pages/IPDPage";
 import LaboratoryPage from "./pages/LaboratoryPage";
+import RadiologyPage from "./pages/RadiologyPage";
 import PharmacyPage from "./pages/PharmacyPage";
+import BillingPage from "./pages/BillingPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import UsersPage from "./pages/UsersPage";
@@ -48,8 +52,12 @@ const App = () => (
                 <Route path="/appointments" element={<AppointmentsPage />} />
                 <Route path="/appointments/create" element={<AppointmentsPage />} />
                 <Route path="/appointments/:id/edit" element={<AppointmentsPage />} />
+                <Route path="/opd" element={<OPDPage />} />
+                <Route path="/ipd" element={<IPDPage />} />
                 <Route path="/laboratory" element={<LaboratoryPage />} />
+                <Route path="/radiology" element={<RadiologyPage />} />
                 <Route path="/pharmacy" element={<PharmacyPage />} />
+                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/users" element={<UsersPage />} />
