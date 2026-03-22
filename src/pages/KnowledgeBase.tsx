@@ -1,5 +1,6 @@
 // src/pages/KnowledgeBase.tsx
-// Card grid + centred overlay. pendingItem fix so overlay works immediately after create.
+// Card grid. Single overlay handles CREATE, VIEW and EDIT.
+// No Radix Dialog involved — avoids focus-trap/z-index conflicts.
 
 import CommentsSection from '@/components/content/CommentsSection';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,8 +18,9 @@ import ReactMarkdown from 'react-markdown';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   useKnowledgeArticles, useCreateKnowledgeArticle,
   useUpdateKnowledgeArticle, useUpdateKnowledgeStatus, useDepartments,
@@ -50,51 +52,44 @@ const CAT_STRIP: Record<string, string> = {
   training:  'from-emerald-400/60 to-emerald-400/20',
 };
 
-const DEFAULT_CONTENT = `## Overview\n\nBrief description.\n\n## Details\n\nMain content here.\n\n## References\n\n- Reference 1\n`;
+const DEFAULT_CONTENT =
+  `## Overview\n\nBrief description.\n\n## Details\n\nMain content here.\n\n## References\n\n- Reference 1\n`;
 
 function excerpt(md: string, max = 130) {
   const plain = md.replace(/#+\s/g, '').replace(/[*_`>\-]/g, '').replace(/\n+/g, ' ').trim();
   return plain.length > max ? plain.slice(0, max) + '…' : plain;
 }
 
+// Overlay modes
+type OverlayMode = 'view' | 'edit' | 'create';
+
 const KnowledgeBase = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // FIX: pendingItem holds the freshly-created/clicked item so the overlay
-  // renders immediately, before the list refetch completes.
-  const [overlayId,   setOverlayId]   = useState<string | null>(null);
-  const [pendingItem, setPendingItem] = useState<any | null>(null);
-  const [isEditing,   setIsEditing]   = useState(false);
-  const [editTitle,   setEditTitle]   = useState('');
-  const [editContent, setEditContent] = useState('');
-  const [editCat,     setEditCat]     = useState<KnowledgeCategory>('protocol');
-  const [editDept,    setEditDept]    = useState('');
+  // ── Single overlay state ──────────────────────────────────────────────────
+  // mode=null means overlay is closed
+  const [mode,         setMode]         = useState<OverlayMode | null>(null);
+  const [activeItem,   setActiveItem]   = useState<any | null>(null); // view/edit target
+  const [editTitle,    setEditTitle]    = useState('');
+  const [editContent,  setEditContent]  = useState('');
+  const [editCat,      setEditCat]      = useState<KnowledgeCategory>('protocol');
+  const [editDept,     setEditDept]     = useState('');
   const [editTagInput, setEditTagInput] = useState('');
-  const [editTags,    setEditTags]    = useState<string[]>([]);
+  const [editTags,     setEditTags]     = useState<string[]>([]);
 
-  const [showCreate,  setShowCreate]  = useState(false);
-  const [newTitle,    setNewTitle]    = useState('');
-  const [newContent,  setNewContent]  = useState(DEFAULT_CONTENT);
-  const [newCat,      setNewCat]      = useState<KnowledgeCategory>('protocol');
-  const [newDept,     setNewDept]     = useState('');
-  const [newTagInput, setNewTagInput] = useState('');
-  const [newTags,     setNewTags]     = useState<string[]>([]);
-
+  // ── Filters ───────────────────────────────────────────────────────────────
   const [search,     setSearch]     = useState('');
   const [catFilter,  setCatFilter]  = useState('all');
   const [statFilter, setStatFilter] = useState('all');
 
   const { data, isLoading } = useKnowledgeArticles({
-    search: search || undefined,
-    category: catFilter !== 'all' ? catFilter : undefined,
-    status: statFilter !== 'all' ? statFilter : undefined,
+    search:   search || undefined,
+    category: catFilter  !== 'all' ? catFilter  : undefined,
+    status:   statFilter !== 'all' ? statFilter : undefined,
     limit: 100,
   });
   const articles = data?.data ?? [];
-
-  // Use the fetched version if available, fall back to pendingItem
-  const overlayArticle = articles.find(a => a.id === overlayId) ?? pendingItem;
 
   const { data: deptData } = useDepartments({ active: true });
   const departments = deptData?.data ?? [];
@@ -103,9 +98,15 @@ const KnowledgeBase = () => {
   const updateA = useUpdateKnowledgeArticle();
   const updateS = useUpdateKnowledgeStatus();
 
-  const canCreate  = user?.role === 'admin' || ['doctor','nurse','pharmacist','admin_staff','lab_technician','radiologist','hr_officer','it_staff'].includes(user?.designation ?? '');
-  const canEditA   = (authorId: string) => user?.role === 'admin' || user?.id === authorId || ['doctor','admin_staff'].includes(user?.designation ?? '');
-  const canApprove = user?.role === 'admin' || ['doctor','admin_staff'].includes(user?.designation ?? '');
+  // ── Permissions ───────────────────────────────────────────────────────────
+  const canCreate = user?.role === 'admin' ||
+    ['doctor','nurse','pharmacist','admin_staff','lab_technician',
+     'radiologist','hr_officer','it_staff'].includes(user?.designation ?? '');
+  const canEditA  = (authorId: string) =>
+    user?.role === 'admin' || user?.id === authorId ||
+    ['doctor','admin_staff'].includes(user?.designation ?? '');
+  const canApprove = user?.role === 'admin' ||
+    ['doctor','admin_staff'].includes(user?.designation ?? '');
 
   const addTag = (inp: string, tags: string[], setTags: (t: string[]) => void, setInp: (s: string) => void) => {
     const t = inp.trim().toLowerCase().replace(/\s+/g, '-');
@@ -113,76 +114,107 @@ const KnowledgeBase = () => {
     setInp('');
   };
 
-  // Pass the full item so the overlay renders instantly
-  const openOverlay = (item: any) => {
-    setOverlayId(item.id);
-    setPendingItem(item);
-    setIsEditing(false);
-  };
+  // ── Overlay helpers ───────────────────────────────────────────────────────
   const closeOverlay = () => {
-    setOverlayId(null);
-    setPendingItem(null);
-    setIsEditing(false);
+    setMode(null);
+    setActiveItem(null);
+    setEditTitle(''); setEditContent('');
+    setEditTagInput(''); setEditTags([]);
   };
 
-  const startEdit = () => {
-    if (!overlayArticle) return;
-    setEditTitle(overlayArticle.title);
-    setEditContent(overlayArticle.content);
-    setEditCat(overlayArticle.category);
-    setEditDept(overlayArticle.department_id ?? '');
-    setEditTags(overlayArticle.tags ?? []);
-    setIsEditing(true);
+  const openView = (item: any) => {
+    setActiveItem(item);
+    setMode('view');
   };
 
-  const saveEdit = () => {
-    if (!overlayArticle) return;
-    updateA.mutate(
-      { id: overlayArticle.id, data: { title: editTitle, category: editCat, content: editContent, tags: editTags, department_id: editDept || undefined } },
-      { onSuccess: (res: any) => {
-        setPendingItem(res.data); // update pendingItem so overlay shows fresh data
-        setIsEditing(false);
-        toast({ title: 'Article saved' });
-      }},
-    );
+  const openCreate = () => {
+    setEditTitle('');
+    setEditContent(DEFAULT_CONTENT);
+    setEditCat('protocol');
+    setEditDept('');
+    setEditTags([]);
+    setEditTagInput('');
+    setMode('create');
+    setActiveItem(null);
   };
 
+  const openEdit = () => {
+    if (!activeItem) return;
+    setEditTitle(activeItem.title);
+    setEditContent(activeItem.content ?? '');
+    setEditCat(activeItem.category);
+    setEditDept(activeItem.department_id ?? '');
+    setEditTags(activeItem.tags ?? []);
+    setEditTagInput('');
+    setMode('edit');
+  };
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const handleCreate = (status: 'draft' | 'review' = 'draft') => {
-    if (!newTitle.trim()) return;
+    if (!editTitle.trim()) return;
     createA.mutate(
-      { title: newTitle.trim(), category: newCat, content: newContent, tags: newTags, status, department_id: newDept || undefined },
-      { onSuccess: (res: any) => {
-        setShowCreate(false);
-        resetCreate();
-        openOverlay(res.data); // pass full item, not just ID
-        toast({ title: 'Article created' });
-      }},
+      {
+        title: editTitle.trim(), category: editCat, content: editContent,
+        tags: editTags, status, department_id: editDept || undefined,
+      },
+      {
+        onSuccess: (res: any) => {
+          setActiveItem(res.data);
+          setMode('view');
+          toast({ title: 'Article created' });
+        },
+        onError: () => toast({ title: 'Create failed', variant: 'destructive' }),
+      },
     );
   };
 
-  const resetCreate = () => {
-    setNewTitle(''); setNewContent(DEFAULT_CONTENT); setNewCat('protocol');
-    setNewDept(''); setNewTags([]); setNewTagInput('');
+  const handleSaveEdit = () => {
+    if (!activeItem || !editTitle.trim()) return;
+    updateA.mutate(
+      {
+        id: activeItem.id,
+        data: {
+          title: editTitle, category: editCat, content: editContent,
+          tags: editTags, department_id: editDept || undefined,
+        },
+      },
+      {
+        onSuccess: (res: any) => {
+          setActiveItem(res.data);
+          setMode('view');
+          toast({ title: 'Article saved' });
+        },
+        onError: () => toast({ title: 'Save failed', variant: 'destructive' }),
+      },
+    );
   };
 
   const changeStatus = (id: string, s: string) => {
-    updateS.mutate({ id, status: s }, {
-      onSuccess: (res: any) => {
-        setPendingItem(res.data);
-        toast({ title: STATUS_LABELS[s as any] ?? s });
+    updateS.mutate(
+      { id, status: s },
+      {
+        onSuccess: (res: any) => {
+          setActiveItem(res.data);
+          toast({ title: STATUS_LABELS[s as any] ?? s });
+        },
+        onError: () => toast({ title: 'Update failed', variant: 'destructive' }),
       },
-    });
+    );
   };
 
+  const overlayOpen = mode !== null;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in">
+
       <div className="page-header">
         <div>
           <h1 className="page-title">Knowledge Base</h1>
           <p className="text-sm text-muted-foreground">{articles.length} articles</p>
         </div>
         {canCreate && (
-          <Button onClick={() => setShowCreate(true)}>
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />New Article
           </Button>
         )}
@@ -192,7 +224,12 @@ const KnowledgeBase = () => {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search articles…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+          <Input
+            placeholder="Search articles…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+          />
         </div>
         <Select value={catFilter} onValueChange={setCatFilter}>
           <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
@@ -213,7 +250,7 @@ const KnowledgeBase = () => {
         </Select>
       </div>
 
-      {/* Grid */}
+      {/* Card grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
@@ -221,8 +258,15 @@ const KnowledgeBase = () => {
       ) : articles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
           <BookOpen className="h-12 w-12 opacity-30" />
-          <p className="text-sm">{search || catFilter !== 'all' || statFilter !== 'all' ? 'No articles match your filters' : 'No articles yet'}</p>
-          {canCreate && <Button variant="outline" size="sm" onClick={() => setShowCreate(true)}><Plus className="h-3.5 w-3.5 mr-1.5" />Create first article</Button>}
+          <p className="text-sm">
+            {search || catFilter !== 'all' || statFilter !== 'all'
+              ? 'No articles match your filters' : 'No articles yet'}
+          </p>
+          {canCreate && (
+            <Button variant="outline" size="sm" onClick={openCreate}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Create first article
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -230,7 +274,7 @@ const KnowledgeBase = () => {
             <Card
               key={a.id}
               className="group cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border border-border/60"
-              onClick={() => openOverlay(a)}
+              onClick={() => openView(a)}
             >
               <CardContent className="p-0 flex flex-col">
                 <div className={`h-1.5 bg-gradient-to-r w-full ${CAT_STRIP[a.category] || 'from-muted to-muted/50'}`} />
@@ -249,7 +293,9 @@ const KnowledgeBase = () => {
                       {STATUS_LABELS[a.status as any] || a.status}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1">{excerpt(a.content)}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1">
+                    {excerpt(a.content)}
+                  </p>
                   {a.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {a.tags.slice(0, 3).map(t => (
@@ -272,153 +318,154 @@ const KnowledgeBase = () => {
         </div>
       )}
 
-      {/* ── Centred overlay ──────────────────────────────────────────────────── */}
-      {overlayId && overlayArticle && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8" onClick={closeOverlay}>
+      {/* ── Overlay — handles create / view / edit in one place ──────────── */}
+      {overlayOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+          onClick={mode === 'view' ? closeOverlay : undefined}
+        >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div
             className="relative z-10 flex flex-col bg-card border border-border/50 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] overflow-hidden"
             style={{ animation: 'overlayIn 0.2s cubic-bezier(0.16,1,0.3,1)' }}
             onClick={e => e.stopPropagation()}
           >
-            <div className={`h-1 w-full bg-gradient-to-r shrink-0 ${CAT_STRIP[overlayArticle.category] || 'from-primary/60 to-primary/20'}`} />
+            {/* Accent bar */}
+            <div className={`h-1 w-full bg-gradient-to-r shrink-0 ${
+              mode === 'create' ? 'from-primary/60 to-primary/20'
+              : CAT_STRIP[activeItem?.category] || 'from-primary/60 to-primary/20'
+            }`} />
 
-            {/* Header */}
+            {/* ── Header ─────────────────────────────────────────────────── */}
             <div className="px-6 pt-5 pb-4 border-b border-border/60 shrink-0 space-y-3">
               <div className="flex items-start gap-4">
                 <div className="flex-1 min-w-0">
-                  {isEditing
-                    ? <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} className="text-lg font-bold" />
-                    : <>
-                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className={`text-xs px-2 py-0.5 rounded-full capitalize border ${CAT_COLOR[overlayArticle.category] || ''}`}>
-                            {overlayArticle.category.replace('_', ' ')}
-                          </span>
-                          <Badge className={STATUS_COLORS[overlayArticle.status as any] || ''}>
-                            {STATUS_LABELS[overlayArticle.status as any] || overlayArticle.status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">v{overlayArticle.version ?? 1}</span>
-                        </div>
-                        <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-snug">{overlayArticle.title}</h2>
-                      </>
-                  }
-                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                    <span>{overlayArticle.author_name}</span><span>·</span>
-                    <span>{new Date(overlayArticle.updated_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</span>
-                    <span>·</span><span>{overlayArticle.views ?? 0} views</span>
-                  </div>
+                  {mode === 'view' ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full capitalize border ${CAT_COLOR[activeItem?.category] || ''}`}>
+                          {activeItem?.category?.replace('_', ' ')}
+                        </span>
+                        <Badge className={STATUS_COLORS[activeItem?.status as any] || ''}>
+                          {STATUS_LABELS[activeItem?.status as any] || activeItem?.status}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">v{activeItem?.version ?? 1}</span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-snug">
+                        {activeItem?.title}
+                      </h2>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                        <span>{activeItem?.author_name}</span><span>·</span>
+                        <span>{new Date(activeItem?.updated_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</span>
+                        <span>·</span><span>{activeItem?.views ?? 0} views</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label>{mode === 'create' ? 'Title *' : 'Title'}</Label>
+                      <Input
+                        value={editTitle}
+                        onChange={e => setEditTitle(e.target.value)}
+                        placeholder="Article title…"
+                        className="text-lg font-bold"
+                        autoFocus={mode === 'create'}
+                      />
+                    </div>
+                  )}
                 </div>
-                <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0" onClick={closeOverlay}>
+                <button
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  onClick={closeOverlay}
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              {/* Actions */}
+              {/* Action buttons */}
               <div className="flex items-center gap-2 flex-wrap">
-                {isEditing ? (
+                {mode === 'view' && (
                   <>
-                    <Button size="sm" onClick={saveEdit} disabled={updateA.isPending}>
-                      <Save className="h-3.5 w-3.5 mr-1.5" />{updateA.isPending ? 'Saving…' : 'Save'}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
-                      <X className="h-3.5 w-3.5 mr-1" />Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {canEditA(overlayArticle.author_id) && (
-                      <Button variant="outline" size="sm" onClick={startEdit}>
+                    {canEditA(activeItem?.author_id) && (
+                      <Button variant="outline" size="sm" onClick={openEdit}>
                         <Edit2 className="h-3.5 w-3.5 mr-1.5" />Edit
                       </Button>
                     )}
-                    {overlayArticle.status === 'draft' && canEditA(overlayArticle.author_id) && (
-                      <Button variant="outline" size="sm" onClick={() => changeStatus(overlayArticle.id, 'review')}>
+                    {activeItem?.status === 'draft' && canEditA(activeItem?.author_id) && (
+                      <Button variant="outline" size="sm" onClick={() => changeStatus(activeItem.id, 'review')}>
                         <Send className="h-3.5 w-3.5 mr-1.5" />Submit for Review
                       </Button>
                     )}
-                    {overlayArticle.status === 'review' && canApprove && (
+                    {activeItem?.status === 'review' && canApprove && (
                       <>
-                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => changeStatus(overlayArticle.id, 'approved')}>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => changeStatus(activeItem.id, 'approved')}>
                           <CheckCircle className="h-3.5 w-3.5 mr-1.5" />Approve
                         </Button>
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30" onClick={() => changeStatus(overlayArticle.id, 'rejected')}>
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30" onClick={() => changeStatus(activeItem.id, 'rejected')}>
                           <XCircle className="h-3.5 w-3.5 mr-1.5" />Reject
                         </Button>
                       </>
                     )}
-                    {(overlayArticle.status === 'review' || overlayArticle.status === 'rejected') && canEditA(overlayArticle.author_id) && (
-                      <Button size="sm" variant="outline" onClick={() => changeStatus(overlayArticle.id, 'draft')}>
+                    {(activeItem?.status === 'review' || activeItem?.status === 'rejected') && canEditA(activeItem?.author_id) && (
+                      <Button size="sm" variant="outline" onClick={() => changeStatus(activeItem.id, 'draft')}>
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Back to Draft
                       </Button>
                     )}
-                    {overlayArticle.status === 'approved' && canApprove && (
-                      <Button size="sm" variant="outline" onClick={() => changeStatus(overlayArticle.id, 'archived')}>
+                    {activeItem?.status === 'approved' && canApprove && (
+                      <Button size="sm" variant="outline" onClick={() => changeStatus(activeItem.id, 'archived')}>
                         <Archive className="h-3.5 w-3.5 mr-1.5" />Archive
                       </Button>
                     )}
                   </>
                 )}
+                {mode === 'edit' && (
+                  <>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={!editTitle.trim() || updateA.isPending}>
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {updateA.isPending ? 'Saving…' : 'Save'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setMode('view')}>
+                      <X className="h-3.5 w-3.5 mr-1" />Cancel
+                    </Button>
+                  </>
+                )}
+                {mode === 'create' && (
+                  <>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => handleCreate('review')}
+                      disabled={!editTitle.trim() || createA.isPending}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1.5" />Submit for Review
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleCreate('draft')}
+                      disabled={!editTitle.trim() || createA.isPending}
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {createA.isPending ? 'Saving…' : 'Save Draft'}
+                    </Button>
+                  </>
+                )}
               </div>
 
-              {/* Tags */}
-              {!isEditing && overlayArticle.tags?.length > 0 && (
+              {/* Tags display (view mode) */}
+              {mode === 'view' && activeItem?.tags?.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  {overlayArticle.tags.map((t: string) => (
+                  {activeItem.tags.map((t: string) => (
                     <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t}</span>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Body */}
+            {/* ── Scrollable body ─────────────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto">
               <div className="px-6 py-5">
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label>Category</Label>
-                        <Select value={editCat} onValueChange={v => setEditCat(v as KnowledgeCategory)}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Department</Label>
-                        <Select value={editDept} onValueChange={setEditDept}>
-                          <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">All departments</SelectItem>
-                            {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Tags</Label>
-                        <div className="flex gap-2">
-                          <Input placeholder="Add tag…" value={editTagInput} onChange={e => setEditTagInput(e.target.value)}
-                            onKeyDown={e => { if (e.key==='Enter'||e.key===','){e.preventDefault();addTag(editTagInput,editTags,setEditTags,setEditTagInput);}}} />
-                          <Button type="button" variant="outline" size="sm" onClick={() => addTag(editTagInput,editTags,setEditTags,setEditTagInput)}>
-                            <Tag className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                        {editTags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {editTags.map(t => (
-                              <Badge key={t} variant="secondary" className="gap-1">{t}
-                                <button onClick={() => setEditTags(editTags.filter(x=>x!==t))}><X className="h-2.5 w-2.5"/></button>
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div data-color-mode="light">
-                      <MDEditor value={editContent} onChange={v => setEditContent(v || '')} height={360} />
-                    </div>
-                  </div>
-                ) : (
+
+                {/* VIEW mode — render markdown */}
+                {mode === 'view' && (
                   <div className="prose prose-sm max-w-none
                     prose-headings:font-bold prose-headings:text-foreground
                     prose-p:text-foreground/90 prose-strong:text-foreground
@@ -427,13 +474,87 @@ const KnowledgeBase = () => {
                     prose-td:p-2 prose-td:border prose-td:text-foreground
                     prose-code:bg-muted prose-code:px-1 prose-code:rounded
                     prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground">
-                    <ReactMarkdown>{overlayArticle.content}</ReactMarkdown>
+                    <ReactMarkdown>{activeItem?.content ?? ''}</ReactMarkdown>
+                  </div>
+                )}
+
+                {/* CREATE or EDIT mode — form + editor */}
+                {(mode === 'create' || mode === 'edit') && (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Category</Label>
+                        <Select value={editCat} onValueChange={v => setEditCat(v as KnowledgeCategory)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Department</Label>
+                        <Select value={editDept} onValueChange={setEditDept}>
+                          <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">All departments</SelectItem>
+                            {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Tags</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Add tag…"
+                            value={editTagInput}
+                            onChange={e => setEditTagInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' || e.key === ',') {
+                                e.preventDefault();
+                                addTag(editTagInput, editTags, setEditTags, setEditTagInput);
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button" variant="outline" size="sm"
+                            onClick={() => addTag(editTagInput, editTags, setEditTags, setEditTagInput)}
+                          >
+                            <Tag className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        {editTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {editTags.map(t => (
+                              <Badge key={t} variant="secondary" className="gap-1">
+                                {t}
+                                <button onClick={() => setEditTags(editTags.filter(x => x !== t))}>
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div data-color-mode="light">
+                      <MDEditor
+                        value={editContent}
+                        onChange={v => setEditContent(v || '')}
+                        height={360}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
-              {!isEditing && (
+
+              {/* Comments — view mode only */}
+              {mode === 'view' && activeItem && (
                 <div className="px-6 pb-6">
-                  <CommentsSection targetId={overlayArticle.id} targetType="knowledge" title="Reader Comments" />
+                  <CommentsSection
+                    targetId={activeItem.id}
+                    targetType="knowledge"
+                    title="Reader Comments"
+                  />
                 </div>
               )}
             </div>
@@ -441,73 +562,10 @@ const KnowledgeBase = () => {
         </div>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={open => { setShowCreate(open); if (!open) resetCreate(); }}>
-        <DialogContent className="w-full max-w-3xl max-h-[90vh] flex flex-col">
-          <DialogHeader><DialogTitle>New Knowledge Article</DialogTitle></DialogHeader>
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-4 py-2">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Title *</Label>
-                <Input placeholder="Article title…" value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Category</Label>
-                <Select value={newCat} onValueChange={v => setNewCat(v as KnowledgeCategory)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Department</Label>
-                <Select value={newDept} onValueChange={setNewDept}>
-                  <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All departments</SelectItem>
-                    {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Tags</Label>
-                <div className="flex gap-2">
-                  <Input placeholder="Add tag…" value={newTagInput} onChange={e => setNewTagInput(e.target.value)}
-                    onKeyDown={e => {if(e.key==='Enter'||e.key===','){e.preventDefault();addTag(newTagInput,newTags,setNewTags,setNewTagInput);}}} />
-                  <Button type="button" variant="outline" size="sm" onClick={() => addTag(newTagInput,newTags,setNewTags,setNewTagInput)}>
-                    <Tag className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-                {newTags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {newTags.map(t => (
-                      <Badge key={t} variant="secondary" className="gap-1">{t}
-                        <button onClick={() => setNewTags(newTags.filter(x=>x!==t))}><X className="h-2.5 w-2.5"/></button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div data-color-mode="light">
-              <MDEditor value={newContent} onChange={v => setNewContent(v || '')} height={280} />
-            </div>
-          </div>
-          <DialogFooter className="shrink-0 pt-2 flex-wrap gap-2">
-            <Button variant="outline" onClick={() => { setShowCreate(false); resetCreate(); }}>Cancel</Button>
-            <Button variant="outline" onClick={() => handleCreate('review')} disabled={!newTitle.trim() || createA.isPending}>
-              <Send className="h-4 w-4 mr-2" />Submit for Review
-            </Button>
-            <Button onClick={() => handleCreate('draft')} disabled={!newTitle.trim() || createA.isPending}>
-              <Save className="h-4 w-4 mr-2" />{createA.isPending ? 'Saving…' : 'Save Draft'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <style>{`
         @keyframes overlayIn {
           from { opacity: 0; transform: scale(0.96) translateY(10px); }
-          to   { opacity: 1; transform: scale(1)    translateY(0);    }
+          to   { opacity: 1; transform: scale(1)    translateY(0); }
         }
       `}</style>
     </div>
