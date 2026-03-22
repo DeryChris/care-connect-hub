@@ -155,7 +155,7 @@ const KnowledgeBase = () => {
     createA.mutate(
       {
         title: editTitle.trim(), category: editCat, content: editContent,
-        tags: editTags, status, department_id: editDept || undefined,
+        tags: editTags, status, department_id: editDept && editDept !== '__none__' ? editDept : undefined,
       },
       {
         onSuccess: (res: any) => {
@@ -175,7 +175,7 @@ const KnowledgeBase = () => {
         id: activeItem.id,
         data: {
           title: editTitle, category: editCat, content: editContent,
-          tags: editTags, department_id: editDept || undefined,
+          tags: editTags, department_id: editDept && editDept !== '__none__' ? editDept : undefined,
         },
       },
       {

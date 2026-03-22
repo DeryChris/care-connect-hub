@@ -151,7 +151,7 @@ const Documents = () => {
     fd.append('tags',     JSON.stringify(editTags));
     fd.append('status',   status);
     fd.append('content',  editContent);
-    if (editDept) fd.append('department_id', editDept);
+    if (editDept && editDept !== '__none__') fd.append('department_id', editDept);
     uploadDoc.mutate(fd, {
       onSuccess: (res: any) => {
         setActiveItem(res.data);
@@ -169,7 +169,7 @@ const Documents = () => {
     fd.append('category', editCat);
     fd.append('tags',     JSON.stringify(editTags));
     fd.append('content',  editContent);
-    if (editDept) fd.append('department_id', editDept);
+    if (editDept && editDept !== '__none__') fd.append('department_id', editDept);
     updateDoc.mutate(
       { id: activeItem.id, formData: fd },
       {
