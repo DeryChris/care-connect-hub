@@ -2,6 +2,12 @@
 // Supports two document modes:
 //   1. File upload  — PDF, Word, etc. stored on disk
 //   2. Markdown     — content written inline via MDEditor, no file needed
+//
+// NOTE: The `content` field is added by the migration
+// (20260320000000_document_content). Run `npx prisma migrate dev` or the raw
+// SQL first, then `npx prisma generate`, before building the backend.
+// Until then the TypeScript types won't include `content` — hence we use
+// `as any` on the data objects to avoid compile errors during that window.
 
 import { Request, Response } from 'express';
 import path from 'path';
@@ -12,6 +18,7 @@ import {
   parsePagination, paginate,
 } from '../lib/response';
 import { formatFileSize } from '../middleware/upload';
+import { createNotification } from './notifications.controller';
 
 export async function list(req: Request, res: Response) {
   const { page, limit, skip } = parsePagination(req.query);
@@ -36,6 +43,7 @@ export async function list(req: Request, res: Response) {
       skip,
       take:    limit,
       orderBy: { uploaded_at: 'desc' },
+      // No `select` — return all fields including `content` once migration runs
     }),
   ]);
 
@@ -63,10 +71,7 @@ export async function getOne(req: Request, res: Response) {
 export async function create(req: Request, res: Response) {
   if (!req.user) return notFound(res, 'User');
 
-  // FIX: destructure `status` from req.body so the frontend can control it.
-  // Previously it was hardcoded to 'draft', ignoring the value sent by the
-  // client (e.g. when the user clicks "Submit for Review" which sends 'review').
-  const { title, category, department_id, tags, content, status } = req.body;
+  const { title, category, department_id, tags, content } = req.body;
 
   // ── Markdown-only mode (no file uploaded) ────────────────────────────────
   if (!req.file) {
@@ -83,7 +88,7 @@ export async function create(req: Request, res: Response) {
         mime_type:        'text/markdown',
         uploaded_by:      req.user.userId,
         uploaded_by_name: req.user.name,
-        status:           status || 'draft',   // use the value from the client
+        status:           'draft',
         tags:             tags ? JSON.parse(tags) : [],
         department_id:    department_id || null,
       },
@@ -104,7 +109,7 @@ export async function create(req: Request, res: Response) {
       mime_type:        req.file.mimetype,
       uploaded_by:      req.user.userId,
       uploaded_by_name: req.user.name,
-      status:           status || 'draft',   // use the value from the client
+      status:           'draft',
       tags:             tags ? JSON.parse(tags) : [],
       department_id:    department_id || null,
     },
@@ -150,10 +155,20 @@ export async function update(req: Request, res: Response) {
 export async function updateStatus(req: Request, res: Response) {
   const { status } = req.body;
   if (!status) return badRequest(res, 'status is required');
-  const updated = await prisma.document.update({
+  const updated = await (prisma.document as any).update({
     where: { id: req.params.id },
     data:  { status },
   });
+
+  if (req.user && updated.uploaded_by !== req.user.userId) {
+    const label = ({ approved: 'approved ✓', rejected: 'rejected', archived: 'archived', review: 'submitted for review', draft: 'moved back to draft' } as Record<string, string>)[status as string] ?? status;
+    await createNotification(
+      updated.uploaded_by, 'status_change',
+      `Document ${label}: "${updated.title}"`,
+      `Your document status was changed to ${status}.`,
+      { targetType: 'document', targetId: updated.id, link: '/documents' },
+    );
+  }
   return ok(res, updated);
 }
 

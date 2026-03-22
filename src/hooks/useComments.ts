@@ -15,13 +15,23 @@ export function usePostComment(targetType: string, targetId: string) {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (message: string) => commentsService.create(targetType, targetId, message),
+    mutationFn: ({ message, parentId }: { message: string; parentId?: string }) =>
+      commentsService.create(targetType, targetId, message, parentId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['comments', targetType, targetId] });
-      toast({ title: 'Comment added', description: 'Your comment is now visible to other readers.' });
     },
     onError: (err: any) =>
       toast({ title: 'Error', description: err?.error?.message, variant: 'destructive' }),
+  });
+}
+
+export function useToggleLike(targetType: string, targetId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) => commentsService.toggleLike(commentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', targetType, targetId] });
+    },
   });
 }
 

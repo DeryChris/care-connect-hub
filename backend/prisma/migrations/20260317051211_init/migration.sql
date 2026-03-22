@@ -636,3 +636,54 @@ ALTER TABLE "ContentComment" ADD CONSTRAINT "ContentComment_author_id_fkey" FORE
 -- The field is nullable so existing documents with only file_path still work.
 
 ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT;
+
+
+-- Migration: add comment replies, comment likes, and notifications
+-- Run: cd backend && npx prisma migrate dev --name comments_likes_notifications
+
+-- 1. Add parent_id to ContentComment (for threaded replies)
+ALTER TABLE "ContentComment" ADD COLUMN "parent_id" TEXT;
+
+-- 2. Create ContentCommentLike table
+CREATE TABLE "ContentCommentLike" (
+  "id"         TEXT         NOT NULL,
+  "comment_id" TEXT         NOT NULL,
+  "user_id"    TEXT         NOT NULL,
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "ContentCommentLike_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "ContentCommentLike_comment_id_user_id_key"
+  ON "ContentCommentLike"("comment_id", "user_id");
+CREATE INDEX "ContentCommentLike_comment_id_idx" ON "ContentCommentLike"("comment_id");
+CREATE INDEX "ContentCommentLike_user_id_idx"    ON "ContentCommentLike"("user_id");
+
+ALTER TABLE "ContentCommentLike"
+  ADD CONSTRAINT "ContentCommentLike_comment_id_fkey"
+  FOREIGN KEY ("comment_id") REFERENCES "ContentComment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "ContentCommentLike"
+  ADD CONSTRAINT "ContentCommentLike_user_id_fkey"
+  FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- 3. Create Notification table
+CREATE TYPE "NotificationType" AS ENUM ('comment', 'reply', 'status_change');
+
+CREATE TABLE "Notification" (
+  "id"          TEXT             NOT NULL,
+  "user_id"     TEXT             NOT NULL,
+  "type"        "NotificationType" NOT NULL,
+  "title"       TEXT             NOT NULL,
+  "message"     TEXT             NOT NULL,
+  "link"        TEXT,
+  "target_type" TEXT,
+  "target_id"   TEXT,
+  "is_read"     BOOLEAN          NOT NULL DEFAULT false,
+  "created_at"  TIMESTAMP(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+CREATE INDEX "Notification_user_id_idx" ON "Notification"("user_id");
+CREATE INDEX "Notification_is_read_idx" ON "Notification"("is_read");
+
+ALTER TABLE "Notification"
+  ADD CONSTRAINT "Notification_user_id_fkey"
+  FOREIGN KEY ("user_id") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

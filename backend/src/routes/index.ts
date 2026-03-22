@@ -20,6 +20,7 @@ import * as knowledge from '../controllers/knowledge.controller';
 import * as documents from '../controllers/documents.controller';
 import * as wiki from '../controllers/wiki.controller';
 import * as comments from '../controllers/comments.controller';
+import * as notifications from '../controllers/notifications.controller';
 import * as search from '../controllers/search.controller';
 import * as dashboard from '../controllers/dashboard.controller';
 import * as reports from '../controllers/reports.controller';
@@ -166,7 +167,14 @@ router.delete('/wiki/:id', authenticate, requireAdmin, wiki.remove);
 // ── Comments ──────────────────────────────────────────────────────────────────
 router.get('/comments', authenticate, comments.list);
 router.post('/comments', authenticate, comments.create);
+router.post('/comments/:id/like', authenticate, comments.toggleLike);
 router.delete('/comments/:id', authenticate, comments.remove);
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+router.get('/notifications', authenticate, notifications.list);
+router.patch('/notifications/read-all', authenticate, notifications.markAllRead);
+router.patch('/notifications/:id/read', authenticate, notifications.markRead);
+router.delete('/notifications/:id', authenticate, notifications.remove);
 
 // ── Search ────────────────────────────────────────────────────────────────────
 router.get('/search', authenticate, search.globalSearch);

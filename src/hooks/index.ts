@@ -17,6 +17,7 @@ export * from './useKnowledge';
 export * from './useDocuments';
 export * from './useWiki';
 export * from './useComments';
+export * from './useNotifications';
 export * from './useSearch';
 export * from './useDashboard';
 export * from './useReports';

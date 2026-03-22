@@ -203,6 +203,8 @@ model User {
   documents_uploaded      Document[]
   wiki_pages_authored     WikiPage[]
   comments                ContentComment[]
+  comment_likes           ContentCommentLike[]
+  notifications           Notification[]
 
   @@index([email])
   @@index([department_id])
@@ -588,18 +590,60 @@ model WikiPage {
 model ContentComment {
   id          String            @id @default(uuid())
   target_type CommentTargetType
-  target_id   String            // plain string — no FK, polymorphic
+  target_id   String
   author_id   String
   author_name String
   author_role String
   message     String            @db.Text
+  parent_id   String?           // null = top-level; set = reply to another comment
   created_at  DateTime          @default(now())
 
-  // Only one real relation — back to the user who wrote it
-  author User @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  author  User                 @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  parent  ContentComment?      @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies ContentComment[]     @relation("CommentReplies")
+  likes   ContentCommentLike[]
 
   @@index([target_type, target_id])
   @@index([author_id])
+  @@index([parent_id])
+}
+
+model ContentCommentLike {
+  id         String         @id @default(uuid())
+  comment_id String
+  user_id    String
+  created_at DateTime       @default(now())
+
+  comment ContentComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([comment_id, user_id])
+  @@index([comment_id])
+  @@index([user_id])
+}
+
+enum NotificationType {
+  comment
+  reply
+  status_change
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  user_id     String
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  link        String?
+  target_type String?
+  target_id   String?
+  is_read     Boolean          @default(false)
+  created_at  DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
 }
 
 model SystemSetting {

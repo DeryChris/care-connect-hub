@@ -35,6 +35,9 @@ export interface ContentCommentAPI {
   author_name: string;
   author_role: string;
   message: string;
+  parent_id?: string | null;
+  likes_count: number;
+  liked_by_me: boolean;
   created_at: string;
 }
 
@@ -412,14 +415,39 @@ export const commentsService = {
       `/comments?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`,
     ),
 
-  create: (targetType: string, targetId: string, message: string) =>
+  create: (targetType: string, targetId: string, message: string, parentId?: string) =>
     api.post<ApiOne<ContentCommentAPI>>('/comments', {
       target_type: targetType,
-      target_id: targetId,
+      target_id:   targetId,
       message,
+      ...(parentId ? { parent_id: parentId } : {}),
     }),
 
+  toggleLike: (commentId: string) =>
+    api.post<ApiOne<{ liked: boolean; likes_count: number }>>(`/comments/${commentId}/like`),
+
   remove: (id: string) => api.delete<null>(`/comments/${id}`),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  type: 'comment' | 'reply' | 'status_change';
+  title: string;
+  message: string;
+  link?: string;
+  target_type?: string;
+  target_id?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export const notificationsService = {
+  list: () => api.get<ApiOne<NotificationItem[]>>('/notifications'),
+  markRead: (id: string) => api.patch<ApiOne<{ success: boolean }>>(`/notifications/${id}/read`),
+  markAllRead: () => api.patch<ApiOne<{ success: boolean }>>('/notifications/read-all'),
+  remove: (id: string) => api.delete<null>(`/notifications/${id}`),
 };
 
 // ── Search ────────────────────────────────────────────────────────────────────

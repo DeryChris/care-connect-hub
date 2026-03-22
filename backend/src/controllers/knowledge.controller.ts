@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { ok, listOk, created, noContent, notFound, badRequest, forbidden, parsePagination, paginate } from '../lib/response';
+import { createNotification } from './notifications.controller';
 
 export async function list(req: Request, res: Response) {
   const { page, limit, skip } = parsePagination(req.query);
@@ -48,6 +49,16 @@ export async function updateStatus(req: Request, res: Response) {
   const { status } = req.body;
   if (!status) return badRequest(res, 'status is required');
   const updated = await prisma.knowledgeArticle.update({ where: { id: req.params.id }, data: { status } });
+
+  if (req.user && updated.author_id !== req.user.userId) {
+    const label = ({ approved: 'approved ✓', rejected: 'rejected', archived: 'archived', review: 'submitted for review', draft: 'moved back to draft' } as Record<string, string>)[status] ?? status;
+    await createNotification(
+      updated.author_id, 'status_change',
+      `Article ${label}: "${updated.title}"`,
+      `Your knowledge article status was changed to ${status}.`,
+      { targetType: 'knowledge', targetId: updated.id, link: '/knowledge' },
+    );
+  }
   return ok(res, updated);
 }
 
