@@ -38,7 +38,7 @@ CREATE TYPE "BillingStatus" AS ENUM ('pending', 'paid', 'partial', 'cancelled', 
 CREATE TYPE "BillingType" AS ENUM ('consultation', 'laboratory', 'radiology', 'pharmacy', 'ipd', 'procedure', 'other');
 
 -- CreateEnum
-CREATE TYPE "KnowledgeCategory" AS ENUM ('protocol', 'guideline', 'sop', 'drug_info', 'training');
+CREATE TYPE "KnowledgeCategory" AS ENUM ('protocol', 'guideline', 'sop', 'drug_info', 'training', 'administrative');
 
 -- CreateEnum
 CREATE TYPE "ContentStatus" AS ENUM ('draft', 'review', 'approved', 'rejected', 'archived');

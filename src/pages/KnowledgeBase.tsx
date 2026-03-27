@@ -7,14 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Save, Clock, BookOpen, Edit2, Plus, Tag, X,
+  Save, Clock, BookOpen, Edit2, Plus, Tag, X, Printer,
   CheckCircle, XCircle, Archive, RotateCcw, Send, Search,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from '@/components/content/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +26,7 @@ import {
   useUpdateKnowledgeArticle, useUpdateKnowledgeStatus, useDepartments,
 } from '@/hooks';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
+import { printDocument } from '@/lib/printDocument';
 
 type KnowledgeCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
 
@@ -187,6 +188,21 @@ const KnowledgeBase = () => {
         onError: () => toast({ title: 'Save failed', variant: 'destructive' }),
       },
     );
+  };
+
+  const handlePrint = () => {
+    if (!activeItem) return;
+    printDocument({
+      title: activeItem.title,
+      content: activeItem.content,
+      meta: {
+        author: activeItem.author_name,
+        date: new Date(activeItem.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+        category: activeItem.category?.replace('_', ' '),
+        status: activeItem.status,
+        tags: activeItem.tags,
+      },
+    });
   };
 
   const changeStatus = (id: string, s: string) => {
@@ -385,6 +401,9 @@ const KnowledgeBase = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 {mode === 'view' && (
                   <>
+                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                      <Printer className="h-3.5 w-3.5 mr-1.5" />Print
+                    </Button>
                     {canEditA(activeItem?.author_id) && (
                       <Button variant="outline" size="sm" onClick={openEdit}>
                         <Edit2 className="h-3.5 w-3.5 mr-1.5" />Edit
@@ -466,16 +485,7 @@ const KnowledgeBase = () => {
 
                 {/* VIEW mode — render markdown */}
                 {mode === 'view' && (
-                  <div className="prose prose-sm max-w-none
-                    prose-headings:font-bold prose-headings:text-foreground
-                    prose-p:text-foreground/90 prose-strong:text-foreground
-                    prose-table:w-full prose-th:text-left prose-th:font-semibold
-                    prose-th:p-2 prose-th:border prose-th:bg-muted/50
-                    prose-td:p-2 prose-td:border prose-td:text-foreground
-                    prose-code:bg-muted prose-code:px-1 prose-code:rounded
-                    prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground">
-                    <ReactMarkdown>{activeItem?.content ?? ''}</ReactMarkdown>
-                  </div>
+                  <MarkdownRenderer content={activeItem?.content ?? ''} />
                 )}
 
                 {/* CREATE or EDIT mode — form + editor */}

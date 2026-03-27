@@ -36,6 +36,7 @@ const CATEGORIES: { value: ArticleCategory; label: string }[] = [
   { value: 'sop',       label: 'SOP' },
   { value: 'drug_info', label: 'Drug Info' },
   { value: 'training',  label: 'Training' },
+  // { value: 'administrative',  label: 'Administrative' },
 ];
 
 const ModeIcon = ({ mode }: { mode: ViewMode }) =>

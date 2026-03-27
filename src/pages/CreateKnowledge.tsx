@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { hasContentPermission } from '@/lib/permissions';
 import { useDepartments, useCreateKnowledgeArticle } from '@/hooks';
 
-type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
+type ArticleCategory = 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training' | 'administrative';
 type ViewMode = 'edit' | 'live' | 'preview';
 
 const CATEGORIES: { value: ArticleCategory; label: string }[] = [
@@ -26,6 +26,7 @@ const CATEGORIES: { value: ArticleCategory; label: string }[] = [
   { value: 'sop',       label: 'SOP' },
   { value: 'drug_info', label: 'Drug Info' },
   { value: 'training',  label: 'Training' },
+  { value: 'administrative',  label: 'Administrative' },
 ];
 
 const DEFAULT_CONTENT = `## Overview

@@ -22,6 +22,7 @@ const categoryColors: Record<string, string> = {
   sop:       'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   drug_info: 'bg-red-500/10 text-red-600 dark:text-red-400',
   training:  'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  administrative:  'bg-red-500/10 text-emerald-700 dark:text-emerald-400',
 };
 
 const KnowledgeArticlePage = () => {

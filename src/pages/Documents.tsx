@@ -8,14 +8,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Save, Clock, FileText, Edit2, Plus, Tag, X,
+  Save, Clock, FileText, Edit2, Plus, Tag, X, Printer,
   CheckCircle, XCircle, Archive, RotateCcw, Send, Search,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from '@/components/content/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ import {
   useUpdateDocumentStatus, useDepartments,
 } from '@/hooks';
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
+import { printDocument } from '@/lib/printDocument';
 
 const CATS = [
   { value: 'protocol',  label: 'Protocol'  },
@@ -181,6 +182,21 @@ const Documents = () => {
         onError: () => toast({ title: 'Save failed', variant: 'destructive' }),
       },
     );
+  };
+
+  const handlePrint = () => {
+    if (!activeItem) return;
+    printDocument({
+      title: activeItem.title,
+      content: activeItem.content ?? '',
+      meta: {
+        author: activeItem.uploaded_by_name,
+        date: new Date(activeItem.uploaded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+        category: activeItem.category,
+        status: activeItem.status,
+        tags: activeItem.tags,
+      },
+    });
   };
 
   const changeStatus = (id: string, s: string) => {
@@ -373,6 +389,9 @@ const Documents = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 {mode === 'view' && (
                   <>
+                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                      <Printer className="h-3.5 w-3.5 mr-1.5" />Print
+                    </Button>
                     {canEditDoc(activeItem?.uploaded_by) && (
                       <Button variant="outline" size="sm" onClick={openEdit}>
                         <Edit2 className="h-3.5 w-3.5 mr-1.5" />Edit
@@ -455,16 +474,7 @@ const Documents = () => {
                 {/* VIEW mode */}
                 {mode === 'view' && (
                   activeItem?.content ? (
-                    <div className="prose prose-sm max-w-none
-                      prose-headings:font-bold prose-headings:text-foreground
-                      prose-p:text-foreground/90 prose-strong:text-foreground
-                      prose-table:w-full prose-th:text-left prose-th:font-semibold
-                      prose-th:p-2 prose-th:border prose-th:bg-muted/50
-                      prose-td:p-2 prose-td:border prose-td:text-foreground
-                      prose-code:bg-muted prose-code:px-1 prose-code:rounded
-                      prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground">
-                      <ReactMarkdown>{activeItem.content}</ReactMarkdown>
-                    </div>
+                    <MarkdownRenderer content={activeItem.content} />
                   ) : (
                     <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-muted-foreground">
                       <FileText className="h-10 w-10 opacity-30" />

@@ -353,7 +353,7 @@ export interface RadiologyRequest {
 export interface KnowledgeArticle {
   id: string;
   title: string;
-  category: 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training';
+  category: 'protocol' | 'guideline' | 'sop' | 'drug_info' | 'training' | 'administrative';
   tags: string[];
   content: string;
   author_id: string;
