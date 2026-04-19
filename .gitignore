@@ -24,6 +24,5 @@ dist-ssr
 *.sw?
 
 
-/img
-AI_PROMPT_HMIS.md
-TODO.md
+.img/*
+.ext/*
