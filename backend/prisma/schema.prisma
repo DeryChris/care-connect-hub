@@ -1,0 +1,654 @@
+// prisma/schema.prisma
+// Care Connect Hub — Complete Database Schema
+// Mirrors every TypeScript interface in src/lib/constants.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  user
+}
+
+enum Designation {
+  doctor
+  nurse
+  receptionist
+  lab_technician
+  radiologist
+  pharmacist
+  accountant
+  hr_officer
+  data_entry
+  it_staff
+  admin_staff
+  employee
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  in_progress
+  completed
+  cancelled
+  no_show
+}
+
+enum AppointmentType {
+  consultation
+  followup
+  emergency
+  checkup
+}
+
+enum LabTestStatus {
+  pending
+  sample_collected
+  processing
+  completed
+  cancelled
+}
+
+enum LabTestResult {
+  normal
+  abnormal
+  critical
+}
+
+enum RadiologyStatus {
+  pending
+  scheduled
+  in_progress
+  completed
+  cancelled
+}
+
+enum RadiologyType {
+  xray
+  ultrasound
+  ct_scan
+  mri
+  mammography
+  angiography
+  other
+}
+
+enum OPDStatus {
+  waiting
+  in_progress
+  completed
+  cancelled
+}
+
+enum IPDStatus {
+  admitted
+  in_progress
+  discharged
+  transferred
+}
+
+enum BillingStatus {
+  pending
+  paid
+  partial
+  cancelled
+  refunded
+}
+
+enum BillingType {
+  consultation
+  laboratory
+  radiology
+  pharmacy
+  ipd
+  procedure
+  other
+}
+
+enum KnowledgeCategory {
+  protocol
+  guideline
+  sop
+  drug_info
+  training
+  administrative
+}
+
+enum ContentStatus {
+  draft
+  review
+  approved
+  rejected
+  archived
+}
+
+enum DocumentCategory {
+  protocol
+  guideline
+  sop
+  manual
+  training
+  report
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+  cancelled
+}
+
+enum Priority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum CommentTargetType {
+  document
+  knowledge
+  wiki
+}
+
+enum InventoryTxType {
+  in
+  out
+  adjustment
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id             String      @id @default(uuid())
+  name           String
+  email          String      @unique
+  password_hash  String
+  role           UserRole    @default(user)
+  designation    Designation
+  phone          String?
+  is_active      Boolean     @default(true)
+  department_id  String?
+  specialization String?
+  qualification  String?
+  fee            Float?
+  permissions    String[]    // array of module key strings
+  refresh_token  String?     // stored as hash
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  // Relations
+  department              Department?        @relation(fields: [department_id], references: [id], onDelete: SetNull)
+  assigned_tasks          Task[]             @relation("AssignedTo")
+  created_tasks           Task[]             @relation("AssignedBy")
+  appointments_as_doctor  Appointment[]
+  opd_visits_as_doctor    OPDVisit[]
+  ipd_admissions_as_doc   IPDAdmission[]
+  lab_tests_ordered       LaboratoryTest[]
+  radiology_ordered       RadiologyRequest[]
+  knowledge_articles      KnowledgeArticle[]
+  documents_uploaded      Document[]
+  wiki_pages_authored     WikiPage[]
+  comments                ContentComment[]
+  comment_likes           ContentCommentLike[]
+  notifications           Notification[]
+
+  @@index([email])
+  @@index([department_id])
+  @@index([role])
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  users              User[]
+  appointments       Appointment[]
+  opd_visits         OPDVisit[]
+  ipd_admissions     IPDAdmission[]
+  knowledge_articles KnowledgeArticle[]
+  documents          Document[]
+}
+
+model Patient {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String?
+  phone              String
+  date_of_birth      String   // kept as String to match TypeScript interface
+  gender             Gender
+  blood_group        String?
+  address            String
+  department_id      String?
+  emergency_contact  String?
+  emergency_phone    String?
+  insurance_provider String?
+  insurance_number   String?
+  is_active          Boolean  @default(true)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  // Relations
+  appointments   Appointment[]
+  opd_visits     OPDVisit[]
+  ipd_admissions IPDAdmission[]
+  lab_tests      LaboratoryTest[]
+  radiology      RadiologyRequest[]
+  invoices       BillingInvoice[]
+
+  @@index([name])
+  @@index([phone])
+}
+
+model Appointment {
+  id               String            @id @default(uuid())
+  patient_id       String
+  patient_name     String            // denormalised for display
+  doctor_id        String
+  doctor_name      String            // denormalised for display
+  department_id    String
+  department_name  String            // denormalised for display
+  appointment_date String            // YYYY-MM-DD
+  appointment_time String            // HH:MM
+  type             AppointmentType
+  status           AppointmentStatus @default(scheduled)
+  reason           String
+  notes            String?
+  created_at       DateTime          @default(now())
+  updated_at       DateTime          @updatedAt
+
+  patient    Patient    @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor     User       @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  department Department @relation(fields: [department_id], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([doctor_id])
+  @@index([appointment_date])
+  @@index([status])
+}
+
+model OPDVisit {
+  id              String    @id @default(uuid())
+  patient_id      String
+  patient_name    String
+  patient_phone   String
+  doctor_id       String
+  doctor_name     String
+  department_id   String
+  department_name String
+  visit_date      String    // YYYY-MM-DD
+  visit_time      String    // HH:MM
+  chief_complaint String
+  diagnosis       String?
+  prescription    String?
+  status          OPDStatus @default(waiting)
+  vitals          Json?     // { blood_pressure, temperature, pulse, weight }
+  notes           String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  patient    Patient    @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor     User       @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  department Department @relation(fields: [department_id], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([visit_date])
+  @@index([status])
+}
+
+model IPDAdmission {
+  id              String    @id @default(uuid())
+  patient_id      String
+  patient_name    String
+  patient_phone   String
+  patient_age     Int
+  patient_gender  String
+  doctor_id       String
+  doctor_name     String
+  department_id   String
+  department_name String
+  room_number     String
+  bed_number      String
+  admission_date  String    // YYYY-MM-DD
+  admission_time  String    // HH:MM
+  discharge_date  String?   // null = currently admitted
+  diagnosis       String
+  treatment_plan  String?
+  status          IPDStatus @default(admitted)
+  notes           String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  patient    Patient    @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor     User       @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+  department Department @relation(fields: [department_id], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([status])
+  @@index([admission_date])
+}
+
+model LaboratoryTest {
+  id              String         @id @default(uuid())
+  patient_id      String
+  patient_name    String
+  test_name       String
+  test_code       String
+  category        String
+  status          LabTestStatus  @default(pending)
+  result          String?
+  result_value    String?
+  result_unit     String?
+  reference_range String?
+  result_status   LabTestResult?
+  ordered_by      String         // user id
+  ordered_by_name String
+  collected_at    String?        // ISO datetime string
+  completed_at    String?
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+
+  patient  Patient @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor   User    @relation(fields: [ordered_by], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([status])
+}
+
+model RadiologyRequest {
+  id               String          @id @default(uuid())
+  patient_id       String
+  patient_name     String
+  patient_age      Int
+  patient_gender   String
+  doctor_id        String
+  doctor_name      String
+  radiology_type   RadiologyType
+  examination      String
+  clinical_history String?
+  status           RadiologyStatus @default(pending)
+  appointment_date String?
+  appointment_time String?
+  report           String?
+  findings         String?         @db.Text
+  impression       String?         @db.Text
+  radiologist_notes String?        @db.Text
+  completed_at     String?
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  patient Patient @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  doctor  User    @relation(fields: [doctor_id], references: [id], onDelete: Restrict)
+
+  @@index([patient_id])
+  @@index([status])
+}
+
+model PharmacyItem {
+  id           String   @id @default(uuid())
+  name         String
+  generic_name String?
+  category     String
+  unit         String
+  quantity     Int      @default(0)
+  min_quantity Int      @default(0)
+  unit_price   Float
+  supplier     String?
+  location     String?
+  expiry_date  String?
+  barcode      String?  @unique
+  dosage       String?
+  side_effects String?
+  notes        String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([name])
+  @@index([category])
+}
+
+model InventoryItem {
+  id           String   @id @default(uuid())
+  name         String
+  category     String
+  unit         String
+  quantity     Int      @default(0)
+  min_quantity Int      @default(0)
+  unit_price   Float
+  supplier     String?
+  location     String?
+  expiry_date  String?
+  barcode      String?  @unique
+  notes        String?
+  is_active    Boolean  @default(true)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  transactions InventoryTransaction[]
+
+  @@index([name])
+  @@index([category])
+}
+
+model InventoryTransaction {
+  id                String          @id @default(uuid())
+  inventory_item_id String
+  type              InventoryTxType
+  quantity          Int
+  unit_price        Float
+  reference         String?
+  notes             String?
+  created_by        String          // user id
+  created_at        DateTime        @default(now())
+
+  item InventoryItem @relation(fields: [inventory_item_id], references: [id], onDelete: Cascade)
+
+  @@index([inventory_item_id])
+}
+
+model BillingInvoice {
+  id             String        @id @default(uuid())
+  patient_id     String
+  patient_name   String
+  patient_phone  String
+  invoice_number String        @unique
+  billing_type   BillingType
+  subtotal       Float
+  discount       Float         @default(0)
+  tax            Float         @default(0)
+  total          Float
+  amount_paid    Float         @default(0)
+  status         BillingStatus @default(pending)
+  due_date       String?
+  paid_at        String?
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+
+  patient Patient       @relation(fields: [patient_id], references: [id], onDelete: Restrict)
+  items   BillingItem[]
+
+  @@index([patient_id])
+  @@index([status])
+  @@index([invoice_number])
+}
+
+model BillingItem {
+  id          String @id @default(uuid())
+  invoice_id  String
+  description String
+  quantity    Int
+  unit_price  Float
+  total       Float
+
+  invoice BillingInvoice @relation(fields: [invoice_id], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id               String     @id @default(uuid())
+  title            String
+  description      String?
+  module           String     // module key from MODULES constant
+  priority         Priority   @default(medium)
+  status           TaskStatus @default(pending)
+  due_date         String?
+  assigned_to      String?
+  assigned_to_name String?
+  assigned_by      String
+  assigned_by_name String?
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+
+  assignee User? @relation("AssignedTo", fields: [assigned_to], references: [id], onDelete: SetNull)
+  assigner User  @relation("AssignedBy", fields: [assigned_by], references: [id], onDelete: Restrict)
+
+  @@index([assigned_to])
+  @@index([status])
+  @@index([priority])
+}
+
+model KnowledgeArticle {
+  id            String            @id @default(uuid())
+  title         String
+  category      KnowledgeCategory
+  tags          String[]
+  content       String            @db.Text
+  author_id     String
+  author_name   String
+  status        ContentStatus     @default(draft)
+  version       Int               @default(1)
+  views         Int               @default(0)
+  department_id String?
+  created_at    DateTime          @default(now())
+  updated_at    DateTime          @updatedAt
+
+  author     User        @relation(fields: [author_id], references: [id], onDelete: Restrict)
+  department Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([status])
+  @@index([author_id])
+}
+
+model Document {
+  id            String          @id @default(uuid())
+  title         String
+  filename      String          @default("")
+  file_path     String          @default("")  // S3 key or local file path — empty for markdown-only docs
+  content       String?         @db.Text      // Optional markdown body content (alternative to file upload)
+  category      DocumentCategory
+  size          String          @default("0 B")  // human readable e.g. "1.2 MB"
+  mime_type     String          @default("text/markdown")
+  uploaded_by   String
+  uploaded_by_name String
+  status        ContentStatus   @default(draft)
+  views         Int             @default(0)
+  downloads     Int             @default(0)
+  tags          String[]
+  department_id String?
+  uploaded_at   DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  uploader   User        @relation(fields: [uploaded_by], references: [id], onDelete: Restrict)
+  department Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([status])
+  @@index([uploaded_by])
+}
+
+model WikiPage {
+  id         String   @id @default(uuid())
+  title      String
+  content    String   @db.Text
+  author_id  String
+  author     String   // denormalised name
+  updated_at DateTime @default(now()) @updatedAt
+  created_at DateTime @default(now())
+
+  author_user User             @relation(fields: [author_id], references: [id], onDelete: Restrict)
+}
+
+model ContentComment {
+  id          String            @id @default(uuid())
+  target_type CommentTargetType
+  target_id   String
+  author_id   String
+  author_name String
+  author_role String
+  message     String            @db.Text
+  parent_id   String?           // null = top-level; set = reply to another comment
+  created_at  DateTime          @default(now())
+
+  author  User                 @relation(fields: [author_id], references: [id], onDelete: Cascade)
+  parent  ContentComment?      @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade)
+  replies ContentComment[]     @relation("CommentReplies")
+  likes   ContentCommentLike[]
+
+  @@index([target_type, target_id])
+  @@index([author_id])
+  @@index([parent_id])
+}
+
+model ContentCommentLike {
+  id         String         @id @default(uuid())
+  comment_id String
+  user_id    String
+  created_at DateTime       @default(now())
+
+  comment ContentComment @relation(fields: [comment_id], references: [id], onDelete: Cascade)
+  user    User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([comment_id, user_id])
+  @@index([comment_id])
+  @@index([user_id])
+}
+
+enum NotificationType {
+  comment
+  reply
+  status_change
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  user_id     String
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  link        String?
+  target_type String?
+  target_id   String?
+  is_read     Boolean          @default(false)
+  created_at  DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+}
+
+model SystemSetting {
+  key        String   @id   // e.g. 'hospital_name', 'currency', 'dark_mode'
+  value      String
+  updated_at DateTime @updatedAt
+}

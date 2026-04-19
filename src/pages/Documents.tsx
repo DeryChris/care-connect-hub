@@ -1,124 +1,585 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+// src/pages/Documents.tsx
+// Card grid. Single overlay handles CREATE, VIEW and EDIT.
+// No Radix Dialog — avoids focus-trap/z-index conflicts.
+// Markdown-only (no file upload).
+
+import CommentsSection from '@/components/content/CommentsSection';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Save, Clock, FileText, Edit2, Plus, Tag, X, Printer,
+  CheckCircle, XCircle, Archive, RotateCcw, Send, Search,
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+import MDEditor from '@uiw/react-md-editor';
+import MarkdownRenderer from '@/components/content/MarkdownRenderer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Upload, FileText, Search, File, Download, Eye, Trash2, Edit, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
-import { mockDocuments } from '@/lib/mock-data';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { hasContentPermission, getContentPermissions, getAllowedStatusTransitions, STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
-import { getWorkflowStatus, setWorkflowStatus, useWorkflowRefresh } from '@/lib/content-workflow';
-import { getCommentsForTarget } from '@/lib/mock-comments';
-import DocumentViewer from './DocumentViewer';
+import { Label } from '@/components/ui/label';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  useDocuments, useUploadDocument, useUpdateDocument,
+  useUpdateDocumentStatus, useDepartments,
+} from '@/hooks';
+import { STATUS_LABELS, STATUS_COLORS } from '@/lib/permissions';
+import { printDocument } from '@/lib/printDocument';
 
-const DocumentsPage = () => {
+const CATS = [
+  { value: 'protocol',  label: 'Protocol'  },
+  { value: 'guideline', label: 'Guideline' },
+  { value: 'sop',       label: 'SOP'       },
+  { value: 'manual',    label: 'Manual'    },
+  { value: 'training',  label: 'Training'  },
+  { value: 'report',    label: 'Report'    },
+] as const;
+type DocCategory = typeof CATS[number]['value'];
+
+const CAT_STRIP: Record<string, string> = {
+  protocol:  'from-primary/60 to-primary/20',
+  guideline: 'from-blue-400/60 to-blue-400/20',
+  sop:       'from-amber-400/60 to-amber-400/20',
+  manual:    'from-purple-400/60 to-purple-400/20',
+  training:  'from-emerald-400/60 to-emerald-400/20',
+  report:    'from-rose-400/60 to-rose-400/20',
+};
+
+const DEFAULT_CONTENT =
+  `## Overview\n\nDescribe the purpose of this document.\n\n## Procedure\n\nStep-by-step instructions here.\n\n## References\n\n- Reference 1\n`;
+
+function excerpt(md: string, max = 130) {
+  const plain = md.replace(/#+\s/g, '').replace(/[*_`>\-]/g, '').replace(/\n+/g, ' ').trim();
+  return plain.length > max ? plain.slice(0, max) + '…' : plain;
+}
+
+type OverlayMode = 'view' | 'edit' | 'create';
+
+const Documents = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const refreshWorkflow = useWorkflowRefresh();
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [page, setPage] = useState(1);
-  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
-  const perPage = 10;
 
-  const canCreate = hasContentPermission(user, 'create', 'document');
+  // ── Single overlay state ──────────────────────────────────────────────────
+  const [mode,         setMode]         = useState<OverlayMode | null>(null);
+  const [activeItem,   setActiveItem]   = useState<any | null>(null);
+  const [editTitle,    setEditTitle]    = useState('');
+  const [editContent,  setEditContent]  = useState('');
+  const [editCat,      setEditCat]      = useState<DocCategory>('protocol');
+  const [editDept,     setEditDept]     = useState('');
+  const [editTagInput, setEditTagInput] = useState('');
+  const [editTags,     setEditTags]     = useState<string[]>([]);
 
-  const filteredDocs = useMemo(() => {
-    return mockDocuments.filter(doc => {
-      const workflowStatus = getWorkflowStatus('document', doc.id, doc.status);
-      const matchSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase()) || doc.filename.toLowerCase().includes(search.toLowerCase());
-      const matchCategory = categoryFilter === 'all' || doc.category === categoryFilter;
-      const matchStatus = statusFilter === 'all' || workflowStatus === statusFilter;
-      return matchSearch && matchCategory && matchStatus;
-    });
-  }, [search, categoryFilter, statusFilter]);
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const [search,     setSearch]     = useState('');
+  const [catFilter,  setCatFilter]  = useState('all');
+  const [statFilter, setStatFilter] = useState('all');
 
-  const paginatedDocs = filteredDocs.slice((page - 1) * perPage, page * perPage);
-  const totalPages = Math.ceil(filteredDocs.length / perPage);
+  const { data, isLoading } = useDocuments({
+    search:   search || undefined,
+    category: catFilter  !== 'all' ? catFilter  : undefined,
+    status:   statFilter !== 'all' ? statFilter : undefined,
+    limit: 100,
+  });
+  const docs = (data?.data ?? []) as any[];
 
-  const handleDelete = () => {
-    toast({ title: 'Document deleted', description: 'The document has been removed.' });
-    setDeleteDialog(null);
+  const { data: deptData } = useDepartments({ active: true });
+  const departments = deptData?.data ?? [];
+
+  const uploadDoc    = useUploadDocument();
+  const updateDoc    = useUpdateDocument();
+  const updateStatus = useUpdateDocumentStatus();
+
+  // ── Permissions ───────────────────────────────────────────────────────────
+  const canCreate = user?.role === 'admin' ||
+    ['doctor','nurse','pharmacist','admin_staff','lab_technician',
+     'radiologist','hr_officer','it_staff'].includes(user?.designation ?? '');
+  const canEditDoc = (uploadedBy: string) =>
+    user?.role === 'admin' || user?.id === uploadedBy ||
+    ['admin_staff'].includes(user?.designation ?? '');
+  const canApprove = user?.role === 'admin' ||
+    ['doctor','admin_staff'].includes(user?.designation ?? '');
+
+  const addTag = (inp: string, tags: string[], setTags: (t: string[]) => void, setInp: (s: string) => void) => {
+    const t = inp.trim().toLowerCase().replace(/\s+/g, '-');
+    if (t && !tags.includes(t)) setTags([...tags, t]);
+    setInp('');
   };
 
-  const handleStatusChange = (docId: string, nextStatus: 'approved' | 'rejected') => {
-    setWorkflowStatus('document', docId, nextStatus);
-    refreshWorkflow();
-    toast({
-      title: nextStatus === 'approved' ? 'Document approved' : 'Document rejected',
-      description: nextStatus === 'approved' ? 'Document has been published.' : 'Sent back for revision.',
+  // ── Overlay helpers ───────────────────────────────────────────────────────
+  const closeOverlay = () => {
+    setMode(null);
+    setActiveItem(null);
+    setEditTitle(''); setEditContent('');
+    setEditTagInput(''); setEditTags([]);
+  };
+
+  const openView = (item: any) => {
+    setActiveItem(item);
+    setMode('view');
+  };
+
+  const openCreate = () => {
+    setEditTitle('');
+    setEditContent(DEFAULT_CONTENT);
+    setEditCat('protocol');
+    setEditDept('');
+    setEditTags([]);
+    setEditTagInput('');
+    setMode('create');
+    setActiveItem(null);
+  };
+
+  const openEdit = () => {
+    if (!activeItem) return;
+    setEditTitle(activeItem.title);
+    setEditContent(activeItem.content ?? '');
+    setEditCat(activeItem.category);
+    setEditDept(activeItem.department_id ?? '');
+    setEditTags(activeItem.tags ?? []);
+    setEditTagInput('');
+    setMode('edit');
+  };
+
+  // ── Mutations ─────────────────────────────────────────────────────────────
+  const handleCreate = (status: 'draft' | 'review' = 'draft') => {
+    if (!editTitle.trim()) return;
+    const fd = new FormData();
+    fd.append('title',    editTitle.trim());
+    fd.append('category', editCat);
+    fd.append('tags',     JSON.stringify(editTags));
+    fd.append('status',   status);
+    fd.append('content',  editContent);
+    if (editDept && editDept !== '__none__') fd.append('department_id', editDept);
+    uploadDoc.mutate(fd, {
+      onSuccess: (res: any) => {
+        setActiveItem(res.data);
+        setMode('view');
+        toast({ title: 'Document created' });
+      },
+      onError: () => toast({ title: 'Create failed', variant: 'destructive' }),
     });
   };
 
+  const handleSaveEdit = () => {
+    if (!activeItem || !editTitle.trim()) return;
+    const fd = new FormData();
+    fd.append('title',    editTitle);
+    fd.append('category', editCat);
+    fd.append('tags',     JSON.stringify(editTags));
+    fd.append('content',  editContent);
+    if (editDept && editDept !== '__none__') fd.append('department_id', editDept);
+    updateDoc.mutate(
+      { id: activeItem.id, formData: fd },
+      {
+        onSuccess: (res: any) => {
+          setActiveItem(res.data);
+          setMode('view');
+          toast({ title: 'Document saved' });
+        },
+        onError: () => toast({ title: 'Save failed', variant: 'destructive' }),
+      },
+    );
+  };
+
+  const handlePrint = () => {
+    if (!activeItem) return;
+    printDocument({
+      title: activeItem.title,
+      content: activeItem.content ?? '',
+      meta: {
+        author: activeItem.uploaded_by_name,
+        date: new Date(activeItem.uploaded_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+        category: activeItem.category,
+        status: activeItem.status,
+        tags: activeItem.tags,
+      },
+    });
+  };
+
+  const changeStatus = (id: string, s: string) => {
+    updateStatus.mutate(
+      { id, status: s },
+      {
+        onSuccess: (res: any) => {
+          setActiveItem(res.data);
+          toast({ title: STATUS_LABELS[s as any] ?? s });
+        },
+        onError: () => toast({ title: 'Update failed', variant: 'destructive' }),
+      },
+    );
+  };
+
+  const overlayOpen = mode !== null;
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-fade-in">
+
       <div className="page-header">
         <div>
-          <h1 className="page-title">Document Management</h1>
-          <p className="text-sm text-muted-foreground">{filteredDocs.length} documents found</p>
+          <h1 className="page-title">Documents</h1>
+          <p className="text-sm text-muted-foreground">{docs.length} documents</p>
         </div>
-        <div className="flex gap-2">
-          {canCreate && <Link to="/documents/create"><Button><Upload className="h-4 w-4 mr-2" />Upload Document</Button></Link>}
-        </div>
+        {canCreate && (
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />New Document
+          </Button>
+        )}
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="filter-bar">
-            <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input placeholder="Search documents..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" /></div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All Categories</SelectItem><SelectItem value="protocol">Protocols</SelectItem><SelectItem value="guideline">Guidelines</SelectItem><SelectItem value="sop">SOPs</SelectItem><SelectItem value="manual">Manuals</SelectItem><SelectItem value="training">Training</SelectItem><SelectItem value="report">Reports</SelectItem></SelectContent></Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="draft">Draft</SelectItem><SelectItem value="review">Under Review</SelectItem><SelectItem value="approved">Approved</SelectItem><SelectItem value="rejected">Rejected</SelectItem><SelectItem value="archived">Archived</SelectItem></SelectContent></Select>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search documents…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={catFilter} onValueChange={setCatFilter}>
+          <SelectTrigger className="w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {CATS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statFilter} onValueChange={setStatFilter}>
+          <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="review">In Review</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Card grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
+        </div>
+      ) : docs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 gap-3 text-muted-foreground">
+          <FileText className="h-12 w-12 opacity-30" />
+          <p className="text-sm">
+            {search || catFilter !== 'all' || statFilter !== 'all'
+              ? 'No documents match your filters' : 'No documents yet'}
+          </p>
+          {canCreate && (
+            <Button variant="outline" size="sm" onClick={openCreate}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />Create first document
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {docs.map((doc: any) => (
+            <Card
+              key={doc.id}
+              className="group cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden border border-border/60"
+              onClick={() => openView(doc)}
+            >
+              <CardContent className="p-0 flex flex-col">
+                <div className={`h-1.5 bg-gradient-to-r w-full ${CAT_STRIP[doc.category] || 'from-muted to-muted/50'}`} />
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <FileText className="h-4 w-4 text-primary" />
+                    </div>
+                    <p className="font-semibold text-sm text-foreground line-clamp-2 leading-snug">{doc.title}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="secondary" className="text-xs capitalize">{doc.category}</Badge>
+                    <Badge className={`text-xs ${STATUS_COLORS[doc.status as any] || ''}`}>
+                      {STATUS_LABELS[doc.status as any] || doc.status}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1">
+                    {doc.content ? excerpt(doc.content) : 'No content yet.'}
+                  </p>
+                  {doc.tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {doc.tags.slice(0, 3).map((t: string) => (
+                        <span key={t} className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground">#{t}</span>
+                      ))}
+                      {doc.tags.length > 3 && <span className="text-[10px] text-muted-foreground">+{doc.tags.length - 3}</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-border/40">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    <span>{new Date(doc.uploaded_at).toLocaleDateString('en-GB')}</span>
+                    <span>·</span>
+                    <span className="truncate">{doc.uploaded_by_name}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* ── Overlay — create / view / edit ──────────────────────────────── */}
+      {overlayOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8"
+          onClick={mode === 'view' ? closeOverlay : undefined}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative z-10 flex flex-col bg-card border border-border/50 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] overflow-hidden"
+            style={{ animation: 'overlayIn 0.2s cubic-bezier(0.16,1,0.3,1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Accent bar */}
+            <div className={`h-1 w-full bg-gradient-to-r shrink-0 ${
+              CAT_STRIP[activeItem?.category ?? editCat] || 'from-primary/60 to-primary/20'
+            }`} />
+
+            {/* ── Header ─────────────────────────────────────────────────── */}
+            <div className="px-6 pt-5 pb-4 border-b border-border/60 shrink-0 space-y-3">
+              <div className="flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  {mode === 'view' ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                        <Badge variant="secondary" className="capitalize">{activeItem?.category}</Badge>
+                        <Badge className={STATUS_COLORS[activeItem?.status as any] || ''}>
+                          {STATUS_LABELS[activeItem?.status as any] || activeItem?.status}
+                        </Badge>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-foreground leading-snug flex items-center gap-2">
+                        <FileText className="h-5 w-5 text-primary shrink-0" />
+                        {activeItem?.title}
+                      </h2>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                        <span>{activeItem?.uploaded_by_name}</span><span>·</span>
+                        <span>{new Date(activeItem?.uploaded_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}</span>
+                        <span>·</span><span>{activeItem?.views ?? 0} views</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label>{mode === 'create' ? 'Title *' : 'Title'}</Label>
+                      <Input
+                        value={editTitle}
+                        onChange={e => setEditTitle(e.target.value)}
+                        placeholder="Document title…"
+                        className="text-lg font-bold"
+                        autoFocus={mode === 'create'}
+                      />
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  onClick={closeOverlay}
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {mode === 'view' && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={handlePrint}>
+                      <Printer className="h-3.5 w-3.5 mr-1.5" />Print
+                    </Button>
+                    {canEditDoc(activeItem?.uploaded_by) && (
+                      <Button variant="outline" size="sm" onClick={openEdit}>
+                        <Edit2 className="h-3.5 w-3.5 mr-1.5" />Edit
+                      </Button>
+                    )}
+                    {activeItem?.status === 'draft' && canEditDoc(activeItem?.uploaded_by) && (
+                      <Button variant="outline" size="sm" onClick={() => changeStatus(activeItem.id, 'review')}>
+                        <Send className="h-3.5 w-3.5 mr-1.5" />Submit for Review
+                      </Button>
+                    )}
+                    {activeItem?.status === 'review' && canApprove && (
+                      <>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => changeStatus(activeItem.id, 'approved')}>
+                          <CheckCircle className="h-3.5 w-3.5 mr-1.5" />Approve
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30" onClick={() => changeStatus(activeItem.id, 'rejected')}>
+                          <XCircle className="h-3.5 w-3.5 mr-1.5" />Reject
+                        </Button>
+                      </>
+                    )}
+                    {(activeItem?.status === 'review' || activeItem?.status === 'rejected') && canEditDoc(activeItem?.uploaded_by) && (
+                      <Button size="sm" variant="outline" onClick={() => changeStatus(activeItem.id, 'draft')}>
+                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Back to Draft
+                      </Button>
+                    )}
+                    {activeItem?.status === 'approved' && canApprove && (
+                      <Button size="sm" variant="outline" onClick={() => changeStatus(activeItem.id, 'archived')}>
+                        <Archive className="h-3.5 w-3.5 mr-1.5" />Archive
+                      </Button>
+                    )}
+                  </>
+                )}
+                {mode === 'edit' && (
+                  <>
+                    <Button size="sm" onClick={handleSaveEdit} disabled={!editTitle.trim() || updateDoc.isPending}>
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {updateDoc.isPending ? 'Saving…' : 'Save'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setMode('view')}>
+                      <X className="h-3.5 w-3.5 mr-1" />Cancel
+                    </Button>
+                  </>
+                )}
+                {mode === 'create' && (
+                  <>
+                    <Button
+                      variant="outline" size="sm"
+                      onClick={() => handleCreate('review')}
+                      disabled={!editTitle.trim() || uploadDoc.isPending}
+                    >
+                      <Send className="h-3.5 w-3.5 mr-1.5" />Submit for Review
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleCreate('draft')}
+                      disabled={!editTitle.trim() || uploadDoc.isPending}
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {uploadDoc.isPending ? 'Saving…' : 'Save Draft'}
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Tags display (view mode) */}
+              {mode === 'view' && activeItem?.tags?.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  {activeItem.tags.map((t: string) => (
+                    <span key={t} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Scrollable body ─────────────────────────────────────────── */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-6 py-5">
+
+                {/* VIEW mode */}
+                {mode === 'view' && (
+                  activeItem?.content ? (
+                    <MarkdownRenderer content={activeItem.content} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center min-h-[200px] gap-3 text-muted-foreground">
+                      <FileText className="h-10 w-10 opacity-30" />
+                      <p className="text-sm">No content yet.</p>
+                      {canEditDoc(activeItem?.uploaded_by) && (
+                        <Button size="sm" variant="outline" onClick={openEdit}>
+                          <Edit2 className="h-3.5 w-3.5 mr-1.5" />Add Content
+                        </Button>
+                      )}
+                    </div>
+                  )
+                )}
+
+                {/* CREATE or EDIT mode */}
+                {(mode === 'create' || mode === 'edit') && (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Category</Label>
+                        <Select value={editCat} onValueChange={v => setEditCat(v as DocCategory)}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CATS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Department</Label>
+                        <Select value={editDept} onValueChange={setEditDept}>
+                          <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">All departments</SelectItem>
+                            {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Tags</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Add tag…"
+                            value={editTagInput}
+                            onChange={e => setEditTagInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' || e.key === ',') {
+                                e.preventDefault();
+                                addTag(editTagInput, editTags, setEditTags, setEditTagInput);
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button" variant="outline" size="sm"
+                            onClick={() => addTag(editTagInput, editTags, setEditTags, setEditTagInput)}
+                          >
+                            <Tag className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        {editTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {editTags.map(t => (
+                              <Badge key={t} variant="secondary" className="gap-1">
+                                {t}
+                                <button onClick={() => setEditTags(editTags.filter(x => x !== t))}>
+                                  <X className="h-2.5 w-2.5" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div data-color-mode="light">
+                      <MDEditor
+                        value={editContent}
+                        onChange={v => setEditContent(v || '')}
+                        height={360}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Comments — view mode only */}
+              {mode === 'view' && activeItem && (
+                <div className="px-6 pb-6">
+                  <CommentsSection
+                    targetId={activeItem.id}
+                    targetType="document"
+                    title="Document Comments"
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="stat-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Total Documents</p><p className="mt-1 text-2xl font-bold font-display text-foreground">{mockDocuments.length}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><FileText className="h-6 w-6 text-primary" /></div></div></CardContent></Card>
-        <Card className="stat-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Approved</p><p className="mt-1 text-2xl font-bold font-display text-foreground">{mockDocuments.filter(d => getWorkflowStatus('document', d.id, d.status) === 'approved').length}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10"><CheckCircle className="h-6 w-6 text-success-foreground" /></div></div></CardContent></Card>
-        <Card className="stat-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Pending Review</p><p className="mt-1 text-2xl font-bold font-display text-foreground">{mockDocuments.filter(d => getWorkflowStatus('document', d.id, d.status) === 'review').length}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10"><File className="h-6 w-6 text-warning-foreground" /></div></div></CardContent></Card>
-        <Card className="stat-card"><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Total Downloads</p><p className="mt-1 text-2xl font-bold font-display text-foreground">{mockDocuments.reduce((s, d) => s + d.downloads, 0)}</p></div><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-info/10"><Download className="h-6 w-6 text-info" /></div></div></CardContent></Card>
-      </div>
-
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow className="bg-primary/5"><TableHead>Document</TableHead><TableHead>Category</TableHead><TableHead>Status</TableHead><TableHead>Uploaded</TableHead><TableHead>Engagement</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {paginatedDocs.map(doc => {
-                const perms = getContentPermissions(user, 'document', doc.uploaded_by);
-                const docStatus = getWorkflowStatus('document', doc.id, doc.status);
-                const transitions = getAllowedStatusTransitions(user, docStatus, doc.uploaded_by);
-                const commentCount = getCommentsForTarget('document', doc.id).length;
-
-                return (
-                  <TableRow key={doc.id}>
-                    <TableCell className="font-medium"><div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted"><FileText className="h-5 w-5 text-muted-foreground" /></div><div><p className="font-medium">{doc.title}</p><p className="text-sm text-muted-foreground">{doc.filename}</p></div></div></TableCell>
-                    <TableCell><Badge variant="secondary" className="capitalize">{doc.category}</Badge></TableCell>
-                    <TableCell><Badge className={STATUS_COLORS[docStatus]}>{STATUS_LABELS[docStatus]}</Badge></TableCell>
-                    <TableCell><div className="text-sm"><p>{doc.uploaded_at}</p><p className="text-xs text-muted-foreground">{doc.uploaded_by_name}</p></div></TableCell>
-                    <TableCell><div className="space-y-1 text-sm"><div className="flex items-center gap-1"><Eye className="h-3 w-3" /> {doc.views}</div><div className="flex items-center gap-1 text-muted-foreground"><MessageSquare className="h-3 w-3" /> {commentCount}</div></div></TableCell>
-                    <TableCell className="text-right"><div className="flex items-center justify-end gap-1"><Button variant="ghost" size="icon" onClick={() => setSelectedDocument(doc.id)} title="View"><Eye className="h-4 w-4" /></Button>{perms.update && <Link to={`/documents/${doc.id}/edit`}><Button variant="ghost" size="icon" title="Edit"><Edit className="h-4 w-4" /></Button></Link>}{transitions.includes('approved') && docStatus === 'review' && <Button variant="ghost" size="icon" className="text-success-foreground hover:text-success-foreground" onClick={() => handleStatusChange(doc.id, 'approved')} title="Approve"><CheckCircle className="h-4 w-4" /></Button>}{transitions.includes('rejected') && docStatus === 'review' && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleStatusChange(doc.id, 'rejected')} title="Reject"><XCircle className="h-4 w-4" /></Button>}<Button variant="ghost" size="icon" title="Download"><Download className="h-4 w-4" /></Button>{perms.delete && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialog(doc.id)} title="Delete"><Trash2 className="h-4 w-4" /></Button>}</div></TableCell>
-                  </TableRow>
-                );
-              })}
-              {paginatedDocs.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground"><FileText className="mx-auto h-12 w-12 mb-4 text-muted-foreground/50" /><h3 className="text-lg font-medium mb-1">No documents found</h3><p className="text-sm mb-4">Try adjusting your search or filters</p>{canCreate && <Link to="/documents/create"><Button><Upload className="h-4 w-4 mr-2" /> Upload first document</Button></Link>}</TableCell></TableRow>}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {totalPages > 1 && <div className="flex items-center justify-center gap-2"><Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button><span className="text-sm text-muted-foreground">Page {page} of {totalPages}</span><Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button></div>}
-      {selectedDocument && <DocumentViewer documentId={selectedDocument} isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)} />}
-      <Dialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}><DialogContent><DialogHeader><DialogTitle>Delete Document</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Are you sure you want to delete this document? This action cannot be undone.</p><DialogFooter><Button variant="outline" onClick={() => setDeleteDialog(null)}>Cancel</Button><Button variant="destructive" onClick={handleDelete}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button></DialogFooter></DialogContent></Dialog>
+      <style>{`
+        @keyframes overlayIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };
 
-export default DocumentsPage;
+export default Documents;

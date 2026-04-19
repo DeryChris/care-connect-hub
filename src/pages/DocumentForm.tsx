@@ -1,62 +1,115 @@
-import { useState, useEffect } from 'react';
+// src/pages/DocumentForm.tsx
+// Two modes selectable via tabs:
+//   1. Markdown mode  — write content inline with MDEditor (no file needed)
+//   2. File upload    — upload a PDF, Word, Excel, etc. (traditional)
+// Guards permission check behind `initialising` to prevent blank page on refresh.
+
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
+import MDEditor from '@uiw/react-md-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Send, Upload, X, Tag, FileText } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  ArrowLeft, Save, Send, Upload, X, Tag, FileText, Edit3,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  hasContentPermission, STATUS_LABELS, STATUS_COLORS,
+} from '@/lib/permissions';
+import {
+  useDepartments, useDocument, useUploadDocument,
+  useUpdateDocument, useUpdateDocumentStatus,
+} from '@/hooks';
 import { useToast } from '@/hooks/use-toast';
-import { mockDocuments, mockDepartments } from '@/lib/mock-data';
-import { hasContentPermission, STATUS_LABELS, STATUS_COLORS, getAllowedStatusTransitions, type DocumentStatus } from '@/lib/permissions';
-import { getWorkflowStatus } from '@/lib/content-workflow';
 
 const DOCUMENT_CATEGORIES = [
-  { value: 'protocol', label: 'Protocol' },
+  { value: 'protocol',  label: 'Protocol' },
   { value: 'guideline', label: 'Guideline' },
-  { value: 'sop', label: 'SOP' },
-  { value: 'manual', label: 'Manual' },
-  { value: 'training', label: 'Training' },
-  { value: 'report', label: 'Report' },
+  { value: 'sop',       label: 'SOP' },
+  { value: 'manual',    label: 'Manual' },
+  { value: 'training',  label: 'Training' },
+  { value: 'report',    label: 'Report' },
 ];
 
+const ALLOWED_TYPES = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg';
+
+const DEFAULT_CONTENT = `## Overview
+
+Describe the purpose of this document.
+
+## Procedure
+
+Step-by-step instructions here.
+
+## References
+
+- Reference 1
+`;
+
+type DocMode = 'markdown' | 'file';
+
 const DocumentForm = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const isEdit = !!id;
+  const { id }       = useParams<{ id: string }>();
+  const navigate     = useNavigate();
+  const { user, initialising } = useAuth();
+  const { toast }    = useToast();
+  const isEdit       = !!id;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const existingDoc = isEdit ? mockDocuments.find(d => d.id === id) : null;
+  const { data: existing, isLoading: loadingDoc } = useDocument(id ?? '');
+  const { data: deptsData } = useDepartments({ active: true });
+  const departments = deptsData?.data ?? [];
 
-  const [title, setTitle] = useState('');
-  const [filename, setFilename] = useState('');
-  const [category, setCategory] = useState('protocol');
+  const uploadDoc    = useUploadDocument();
+  const updateDoc    = useUpdateDocument();
+  const updateStatus = useUpdateDocumentStatus();
+
+  const [mode,         setMode]         = useState<DocMode>('markdown');
+  const [title,        setTitle]        = useState('');
+  const [category,     setCategory]     = useState('protocol');
   const [departmentId, setDepartmentId] = useState('');
-  const [description, setDescription] = useState('');
-  const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [status, setStatus] = useState<DocumentStatus>('draft');
-  const [submitting, setSubmitting] = useState(false);
+  const [content,      setContent]      = useState(DEFAULT_CONTENT);
+  const [tagInput,     setTagInput]     = useState('');
+  const [tags,         setTags]         = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragOver,     setDragOver]     = useState(false);
 
   useEffect(() => {
-    if (existingDoc) {
-      setTitle(existingDoc.title);
-      setFilename(existingDoc.filename);
-      setCategory(existingDoc.category);
-      setDepartmentId(existingDoc.department_id || '__all__');
-      setTags(existingDoc.tags || []);
-      setStatus(getWorkflowStatus('document', existingDoc.id, existingDoc.status));
-      setDescription(`Reference notes for ${existingDoc.title}.`);
-    } else {
-      setDepartmentId('__all__');
+    if (existing?.data) {
+      const d = existing.data as any;
+      setTitle(d.title);
+      setCategory(d.category);
+      setDepartmentId(d.department_id ?? '');
+      setTags(d.tags ?? []);
+      // Determine mode from existing doc
+      if (d.file_path && d.file_path !== '') {
+        setMode('file');
+      } else {
+        setMode('markdown');
+        setContent(d.content ?? DEFAULT_CONTENT);
+      }
     }
-  }, [existingDoc]);
+  }, [existing]);
 
-  // Permission check
+  // ── Loading states ────────────────────────────────────────────────────────
+  if (initialising || (isEdit && loadingDoc)) {
+    return (
+      <div className="space-y-6 max-w-4xl">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-[500px] w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  const existingDoc = existing?.data as any;
+
+  // Permission check (safe — user is not null here, initialising is false)
   const canEdit = isEdit
     ? hasContentPermission(user, 'update', 'document', existingDoc?.uploaded_by)
     : hasContentPermission(user, 'create', 'document');
@@ -64,305 +117,353 @@ const DocumentForm = () => {
   if (!canEdit) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
-        <FileText className="h-16 w-16 text-muted-foreground/40" />
-        <h2 className="text-xl font-semibold">Access Denied</h2>
-        <p className="text-muted-foreground">You don't have permission to {isEdit ? 'edit' : 'create'} documents.</p>
-        <Button onClick={() => navigate('/documents')}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Documents
-        </Button>
+        <p className="text-muted-foreground">
+          You don't have permission to {isEdit ? 'edit' : 'create'} documents.
+        </p>
+        <Link to="/documents">
+          <Button variant="outline"><ArrowLeft className="h-4 w-4 mr-2" />Back</Button>
+        </Link>
       </div>
     );
   }
 
-  const allowedTransitions = isEdit
-    ? getAllowedStatusTransitions(user, status, existingDoc?.uploaded_by)
-    : [];
-
   const addTag = () => {
-    const trimmed = tagInput.trim().toLowerCase().replace(/\s+/g, '-');
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags(prev => [...prev, trimmed]);
-    }
+    const t = tagInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (t && !tags.includes(t)) setTags(p => [...p, t]);
     setTagInput('');
   };
 
-  const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
-
-  const handleTagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addTag();
-    }
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    if (!title) setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
   };
 
-  const handleSubmit = (targetStatus: DocumentStatus) => {
-    if (!title.trim()) {
-      toast({ title: 'Title required', variant: 'destructive' });
-      return;
-    }
-    if (!filename.trim()) {
-      toast({ title: 'Filename required', variant: 'destructive' });
-      return;
+  const handleSubmit = (submitStatus: 'draft' | 'review' = 'draft') => {
+    if (!title.trim()) { toast({ title: 'Title is required', variant: 'destructive' }); return; }
+
+    const fd = new FormData();
+    fd.append('title',    title.trim());
+    fd.append('category', category);
+    fd.append('tags',     JSON.stringify(tags));
+    if (departmentId) fd.append('department_id', departmentId);
+
+    if (mode === 'markdown') {
+      fd.append('content', content);
+    } else {
+      if (!isEdit && !selectedFile) {
+        toast({ title: 'Please select a file', variant: 'destructive' });
+        return;
+      }
+      if (selectedFile) fd.append('file', selectedFile);
     }
 
-    setSubmitting(true);
-    setTimeout(() => {
-      toast({
-        title: isEdit ? 'Document updated' : 'Document created',
-        description: targetStatus === 'review'
-          ? 'Document submitted for review.'
-          : `Document saved as ${STATUS_LABELS[targetStatus]}.`,
+    if (isEdit && id) {
+      updateDoc.mutate(
+        { id, formData: fd },
+        {
+          onSuccess: () => { toast({ title: 'Document updated' }); navigate('/documents'); },
+          onError:   (e: any) => toast({ title: e?.error?.message ?? 'Update failed', variant: 'destructive' }),
+        },
+      );
+    } else {
+      uploadDoc.mutate(fd, {
+        onSuccess: () => { toast({ title: 'Document created' }); navigate('/documents'); },
+        onError:   (e: any) => toast({ title: e?.error?.message ?? 'Create failed', variant: 'destructive' }),
       });
-      navigate('/documents');
-    }, 600);
+    }
   };
 
-  const handleStatusChange = (newStatus: DocumentStatus) => {
-    setSubmitting(true);
-    setTimeout(() => {
-      toast({
-        title: `Status changed to ${STATUS_LABELS[newStatus]}`,
-        description: newStatus === 'approved'
-          ? 'Document has been approved and published.'
-          : newStatus === 'rejected'
-          ? 'Document has been sent back for revision.'
-          : undefined,
-      });
-      navigate('/documents');
-    }, 600);
-  };
+  const isPending = uploadDoc.isPending || updateDoc.isPending;
+  const docStatus = existingDoc?.status as any;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-4xl">
       {/* Header */}
       <div className="page-header">
-        <div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-            <Link to="/documents" className="hover:text-foreground flex items-center gap-1">
-              <ArrowLeft className="h-4 w-4" /> Documents
-            </Link>
-            <span>/</span>
-            <span className="text-foreground">{isEdit ? 'Edit' : 'New'} Document</span>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/documents')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="page-title">{isEdit ? 'Edit Document' : 'New Document'}</h1>
+            {isEdit && existingDoc && (
+              <Badge className={STATUS_COLORS[docStatus] || ''}>{STATUS_LABELS[docStatus] || docStatus}</Badge>
+            )}
           </div>
-          <h1 className="page-title">{isEdit ? 'Edit Document' : 'Upload Document'}</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={submitting}>
-            <Save className="h-4 w-4 mr-2" /> Save Draft
-          </Button>
-          <Button onClick={() => handleSubmit('review')} disabled={submitting}>
-            <Send className="h-4 w-4 mr-2" /> Submit for Review
-          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-        {/* Main form */}
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="title">Document Title <span className="text-destructive">*</span></Label>
-                <Input
-                  id="title"
-                  placeholder="e.g., COVID-19 Treatment Protocol v2.3"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  className="text-base font-medium"
+      {/* Mode selector — only shown when creating a new document */}
+      {!isEdit && (
+        <Tabs value={mode} onValueChange={v => setMode(v as DocMode)}>
+          <TabsList className="w-full max-w-sm">
+            <TabsTrigger value="markdown" className="flex-1 gap-2">
+              <Edit3 className="h-4 w-4" />Write with Editor
+            </TabsTrigger>
+            <TabsTrigger value="file" className="flex-1 gap-2">
+              <Upload className="h-4 w-4" />Upload File
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="markdown" className="mt-0">
+            {/* Metadata card */}
+            <div className="grid gap-6 lg:grid-cols-[1fr_280px] mt-6">
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title-md">Document Title *</Label>
+                      <Input id="title-md" placeholder="Enter document title"
+                        value={title} onChange={e => setTitle(e.target.value)} className="text-lg font-medium" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Content</Label>
+                      <div data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+                        <MDEditor
+                          value={content}
+                          onChange={v => setContent(v || '')}
+                          height={500}
+                          preview="live"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground text-right">
+                        {content.length.toLocaleString()} characters
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <ActionBar onDraft={() => handleSubmit('draft')} onReview={() => handleSubmit('review')}
+                  onCancel={() => navigate('/documents')} disabled={!title.trim()} pending={isPending} />
+              </div>
+              <SettingsSidebar category={category} setCategory={setCategory}
+                departmentId={departmentId} setDepartmentId={setDepartmentId}
+                departments={departments} tagInput={tagInput} setTagInput={setTagInput}
+                tags={tags} setTags={setTags} addTag={addTag} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="file" className="mt-0">
+            <div className="grid gap-6 lg:grid-cols-[1fr_280px] mt-6">
+              <div className="space-y-4">
+                <FileUploadCard
+                  selectedFile={selectedFile}
+                  onFileSelect={handleFileSelect}
+                  onClear={() => setSelectedFile(null)}
+                  fileInputRef={fileInputRef}
+                  dragOver={dragOver}
+                  setDragOver={setDragOver}
                 />
+                <Card>
+                  <CardContent className="p-6 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title-file">Document Title *</Label>
+                      <Input id="title-file" placeholder="Enter document title"
+                        value={title} onChange={e => setTitle(e.target.value)} />
+                    </div>
+                  </CardContent>
+                </Card>
+                <ActionBar onDraft={() => handleSubmit('draft')} onReview={() => handleSubmit('review')}
+                  onCancel={() => navigate('/documents')} disabled={!title.trim() || !selectedFile} pending={isPending} />
               </div>
+              <SettingsSidebar category={category} setCategory={setCategory}
+                departmentId={departmentId} setDepartmentId={setDepartmentId}
+                departments={departments} tagInput={tagInput} setTagInput={setTagInput}
+                tags={tags} setTags={setTags} addTag={addTag} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="filename">Filename <span className="text-destructive">*</span></Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="filename"
-                    placeholder="e.g., COVID19_Protocol_v2.3.pdf"
-                    value={filename}
-                    onChange={e => setFilename(e.target.value)}
-                  />
-                  <Button variant="outline" type="button">
-                    <Upload className="h-4 w-4 mr-2" /> Browse
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">Select or enter the document filename</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Brief description of the document content and purpose..."
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* File upload simulation */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                <p className="font-medium text-foreground">Drop file here or click to upload</p>
-                <p className="text-sm text-muted-foreground mt-1">PDF, DOCX, XLSX up to 50MB</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Status & Review */}
-          {isEdit && (
+      {/* Edit mode — show form based on existing doc type */}
+      {isEdit && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="space-y-4">
             <Card>
-              <CardContent className="p-4 space-y-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status & Approval</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Current:</span>
-                  <Badge className={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Badge>
+              <CardContent className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title-edit">Document Title *</Label>
+                  <Input id="title-edit" value={title} onChange={e => setTitle(e.target.value)} className="text-lg font-medium" />
                 </div>
-                {allowedTransitions.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">Change status to:</p>
-                    <div className="flex flex-col gap-1.5">
-                      {allowedTransitions.map(s => (
-                        <Button
-                          key={s}
-                          variant="outline"
-                          size="sm"
-                          className="w-full justify-start"
-                          onClick={() => handleStatusChange(s)}
-                          disabled={submitting}
-                        >
-                          <Badge className={`${STATUS_COLORS[s]} mr-2`} style={{ fontSize: '10px' }}>
-                            {STATUS_LABELS[s]}
-                          </Badge>
-                          Move to {STATUS_LABELS[s]}
-                        </Button>
-                      ))}
+
+                {/* Show MDEditor if it was a markdown doc, or file uploader if file-based */}
+                {mode === 'markdown' ? (
+                  <div className="space-y-2">
+                    <Label>Content</Label>
+                    <div data-color-mode="auto" data-light-theme="light" data-dark-theme="dark">
+                      <MDEditor
+                        value={content}
+                        onChange={v => setContent(v || '')}
+                        height={500}
+                        preview="live"
+                      />
                     </div>
                   </div>
+                ) : (
+                  <FileUploadCard
+                    selectedFile={selectedFile}
+                    onFileSelect={handleFileSelect}
+                    onClear={() => setSelectedFile(null)}
+                    fileInputRef={fileInputRef}
+                    dragOver={dragOver}
+                    setDragOver={setDragOver}
+                    existingFilename={existingDoc?.filename}
+                  />
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Metadata */}
-          <Card>
-            <CardContent className="p-4 space-y-4">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Document Details</p>
-
-              <div className="space-y-1.5">
-                <Label>Category <span className="text-destructive">*</span></Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DOCUMENT_CATEGORIES.map(c => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Department</Label>
-                <Select value={departmentId} onValueChange={setDepartmentId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All departments" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">All departments</SelectItem>
-                    {mockDepartments.filter(d => d.is_active).map(d => (
-                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Uploaded by</Label>
-                <Input value={user?.name || ''} disabled className="bg-muted/40" />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tags */}
-          <Card>
-            <CardContent className="p-4 space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                <Tag className="h-3 w-3" /> Tags
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add tag..."
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  className="h-8 text-sm"
-                />
-                <Button variant="outline" size="sm" onClick={addTag} className="shrink-0">Add</Button>
-              </div>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {tags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs gap-1 pr-1">
-                      {tag}
-                      <button onClick={() => removeTag(tag)} className="hover:text-destructive ml-0.5">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Workflow info */}
-          <Card className="bg-muted/30">
-            <CardContent className="p-4 space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Approval Workflow</p>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-muted-foreground/40" />
-                  <span>Author creates → <strong>Draft</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-warning" />
-                  <span>Submit → <strong>Under Review</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-success" />
-                  <span>Doctor/Admin approves → <strong>Approved</strong></span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-destructive" />
-                  <span>Or rejected → <strong>Revision needed</strong></span>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground pt-1 border-t">
-                Your role: <strong className="text-foreground capitalize">{user?.designation?.replace('_', ' ')}</strong>
-                {user?.role === 'admin' && ' (Full access)'}
-              </p>
-            </CardContent>
-          </Card>
-
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => handleSubmit('review')} disabled={submitting} className="w-full">
-              <Send className="h-4 w-4 mr-2" /> Submit for Review
-            </Button>
-            <Button variant="outline" onClick={() => handleSubmit('draft')} disabled={submitting} className="w-full">
-              <Save className="h-4 w-4 mr-2" /> Save as Draft
-            </Button>
+            <ActionBar onDraft={() => handleSubmit('draft')} onReview={() => handleSubmit('review')}
+              onCancel={() => navigate('/documents')} disabled={!title.trim()} pending={isPending}
+              isEdit submitLabel="Save Changes" />
           </div>
+          <SettingsSidebar category={category} setCategory={setCategory}
+            departmentId={departmentId} setDepartmentId={setDepartmentId}
+            departments={departments} tagInput={tagInput} setTagInput={setTagInput}
+            tags={tags} setTags={setTags} addTag={addTag} />
         </div>
-      </div>
+      )}
     </div>
   );
 };
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function ActionBar({ onDraft, onReview, onCancel, disabled, pending, isEdit = false, submitLabel }: {
+  onDraft: () => void; onReview: () => void; onCancel: () => void;
+  disabled: boolean; pending: boolean; isEdit?: boolean; submitLabel?: string;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      <Button onClick={onDraft} disabled={disabled || pending}>
+        <Save className="h-4 w-4 mr-2" />
+        {pending ? 'Saving…' : submitLabel ?? (isEdit ? 'Save Changes' : 'Save as Draft')}
+      </Button>
+      {!isEdit && (
+        <Button variant="outline" onClick={onReview} disabled={disabled || pending}>
+          <Send className="h-4 w-4 mr-2" />Submit for Review
+        </Button>
+      )}
+      <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+    </div>
+  );
+}
+
+function FileUploadCard({ selectedFile, onFileSelect, onClear, fileInputRef, dragOver, setDragOver, existingFilename }: {
+  selectedFile: File | null;
+  onFileSelect: (f: File) => void;
+  onClear: () => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  dragOver: boolean;
+  setDragOver: (v: boolean) => void;
+  existingFilename?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base">
+        {existingFilename ? 'Replace File (optional)' : 'Select File *'}
+      </CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {existingFilename && !selectedFile && (
+          <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+            <FileText className="h-7 w-7 text-primary shrink-0" />
+            <div>
+              <p className="font-medium text-sm">{existingFilename}</p>
+              <p className="text-xs text-muted-foreground">Current file</p>
+            </div>
+          </div>
+        )}
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/50'
+          }`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) onFileSelect(f); }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {selectedFile ? (
+            <div className="flex items-center justify-center gap-3">
+              <FileText className="h-8 w-8 text-primary" />
+              <div className="text-left">
+                <p className="font-medium text-sm">{selectedFile.name}</p>
+                <p className="text-xs text-muted-foreground">{(selectedFile.size / (1024 * 1024)).toFixed(2)} MB</p>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7 ml-2"
+                onClick={e => { e.stopPropagation(); onClear(); }}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Upload className="h-10 w-10 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Drag & drop or click to browse</p>
+              <p className="text-xs text-muted-foreground">PDF, Word, Excel, PowerPoint, Images — max 20MB</p>
+            </div>
+          )}
+        </div>
+        <input ref={fileInputRef} type="file" accept={ALLOWED_TYPES} className="hidden"
+          onChange={e => { if (e.target.files?.[0]) onFileSelect(e.target.files[0]); }} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SettingsSidebar({ category, setCategory, departmentId, setDepartmentId, departments,
+  tagInput, setTagInput, tags, setTags, addTag }: any) {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle className="text-sm">Document Settings</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Category *</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {DOCUMENT_CATEGORIES.map(c => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Department</Label>
+            <Select value={departmentId} onValueChange={setDepartmentId}>
+              <SelectTrigger><SelectValue placeholder="All departments" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All departments</SelectItem>
+                {departments.map((d: any) => (
+                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Tags</Label>
+            <div className="flex gap-2">
+              <Input placeholder="Add tag…" value={tagInput}
+                onChange={(e: any) => setTagInput(e.target.value)}
+                onKeyDown={(e: any) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(); }}} />
+              <Button type="button" size="sm" variant="outline" onClick={addTag}>
+                <Tag className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {tags.map((tag: string) => (
+                  <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                    {tag}
+                    <button onClick={() => setTags((p: string[]) => p.filter(t => t !== tag))}>
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default DocumentForm;

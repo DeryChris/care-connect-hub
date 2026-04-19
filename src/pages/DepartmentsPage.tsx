@@ -1,74 +1,39 @@
+// src/pages/DepartmentsPage.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Search, Building2 } from 'lucide-react';
-import { Department } from '@/lib/constants';
-import { mockDepartments } from '@/lib/mock-data';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment } from '@/hooks';
 
 const DepartmentsPage = () => {
-  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
-  const [search, setSearch] = useState('');
-  const [editDept, setEditDept] = useState<Department | null>(null);
-  const [isNew, setIsNew] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formDesc, setFormDesc] = useState('');
-  const [formActive, setFormActive] = useState(true);
+  const [dialog, setDialog] = useState<{ mode: 'create' | 'edit' | 'delete'; id?: string } | null>(null);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
 
-  const filtered = departments.filter(d =>
-    !search || d.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const { data, isLoading } = useDepartments();
+  const departments = data?.data ?? [];
 
-  const openNew = () => {
-    setIsNew(true);
-    setFormName('');
-    setFormDesc('');
-    setFormActive(true);
-    setEditDept({} as Department);
-  };
+  const createDept = useCreateDepartment();
+  const updateDept = useUpdateDepartment();
+  const deleteDept = useDeleteDepartment();
 
-  const openEdit = (dept: Department) => {
-    setIsNew(false);
-    setFormName(dept.name);
-    setFormDesc(dept.description);
-    setFormActive(dept.is_active);
-    setEditDept(dept);
-  };
+  const openCreate = () => { setName(''); setDescription(''); setDialog({ mode: 'create' }); };
+  const openEdit = (d: any) => { setName(d.name); setDescription(d.description ?? ''); setDialog({ mode: 'edit', id: d.id }); };
+  const openDelete = (id: string) => setDialog({ mode: 'delete', id });
 
-  const saveDept = () => {
-    if (!formName.trim()) return;
-    if (isNew) {
-      const newDept: Department = {
-        id: String(Date.now()),
-        name: formName,
-        description: formDesc,
-        is_active: formActive,
-        staff_count: 0,
-        created_at: new Date().toISOString().split('T')[0],
-      };
-      setDepartments(prev => [...prev, newDept]);
-    } else if (editDept) {
-      setDepartments(prev => prev.map(d => d.id === editDept.id ? { ...d, name: formName, description: formDesc, is_active: formActive } : d));
+  const handleSave = () => {
+    if (dialog?.mode === 'create') {
+      createDept.mutate({ name, description }, { onSuccess: () => setDialog(null) });
+    } else if (dialog?.mode === 'edit' && dialog.id) {
+      updateDept.mutate({ id: dialog.id, data: { name, description } }, { onSuccess: () => setDialog(null) });
     }
-    setEditDept(null);
-  };
-
-  const deleteDept = (id: string) => {
-    const dept = departments.find(d => d.id === id);
-    if (dept && dept.staff_count > 0) {
-      alert('Cannot delete: department has linked staff.');
-      setDeleteId(null);
-      return;
-    }
-    setDepartments(prev => prev.filter(d => d.id !== id));
-    setDeleteId(null);
   };
 
   return (
@@ -76,96 +41,99 @@ const DepartmentsPage = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Departments</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} departments</p>
+          <p className="text-sm text-muted-foreground">{departments.length} departments</p>
         </div>
-        <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" />Add Department</Button>
-      </div>
-
-      <div className="filter-bar">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search departments..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
-        </div>
+        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />Add Department</Button>
       </div>
 
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary/5">
+              <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Staff</TableHead>
+                <TableHead>Staff Count</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map(dept => (
-                <TableRow key={dept.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-primary" />
-                      {dept.name}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground max-w-[300px] truncate">{dept.description || '—'}</TableCell>
-                  <TableCell>{dept.staff_count}</TableCell>
-                  <TableCell>
-                    <Badge variant={dept.is_active ? "default" : "outline"} className={dept.is_active ? 'bg-success text-success-foreground' : ''}>
-                      {dept.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(dept)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeleteId(dept.id)} className="hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                  ))
+                : departments.map(dept => (
+                    <TableRow key={dept.id}>
+                      <TableCell className="font-medium">{dept.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{dept.description}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{dept.staff_count ?? 0} staff</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {dept.is_active
+                          ? <Badge className="bg-success text-success-foreground">Active</Badge>
+                          : <Badge variant="secondary">Inactive</Badge>
+                        }
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(dept)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-destructive" onClick={() => openDelete(dept.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+              }
+              {!isLoading && departments.length === 0 && (
+                <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No departments found.</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={!!editDept} onOpenChange={() => setEditDept(null)}>
+      {/* Create / Edit Dialog */}
+      <Dialog open={dialog?.mode === 'create' || dialog?.mode === 'edit'} onOpenChange={() => setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isNew ? 'Add Department' : 'Edit Department'}</DialogTitle>
+            <DialogTitle>{dialog?.mode === 'create' ? 'Add Department' : 'Edit Department'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="dept-name">Name *</Label>
-              <Input id="dept-name" value={formName} onChange={e => setFormName(e.target.value)} placeholder="Department name" />
+              <Label htmlFor="dept-name">Department Name *</Label>
+              <Input id="dept-name" required value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Cardiology" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="dept-desc">Description</Label>
-              <Textarea id="dept-desc" value={formDesc} onChange={e => setFormDesc(e.target.value)} placeholder="Optional description" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox id="dept-active" checked={formActive} onCheckedChange={(c) => setFormActive(!!c)} />
-              <Label htmlFor="dept-active">Active</Label>
+              <Textarea id="dept-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder="Brief description" />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDept(null)}>Cancel</Button>
-            <Button onClick={saveDept}>{isNew ? 'Create' : 'Update'}</Button>
+            <Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={!name.trim() || createDept.isPending || updateDept.isPending}>
+              {createDept.isPending || updateDept.isPending ? 'Saving...' : 'Save'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <Dialog open={dialog?.mode === 'delete'} onOpenChange={() => setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Department</DialogTitle>
-            <DialogDescription>Are you sure? This cannot be undone.</DialogDescription>
+            <DialogTitle>Deactivate Department</DialogTitle>
+            <DialogDescription>This will deactivate the department. Staff will remain but unassigned.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteId && deleteDept(deleteId)}>Delete</Button>
+            <Button variant="outline" onClick={() => setDialog(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              if (dialog?.id) deleteDept.mutate(dialog.id, { onSuccess: () => setDialog(null) });
+            }}>Deactivate</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

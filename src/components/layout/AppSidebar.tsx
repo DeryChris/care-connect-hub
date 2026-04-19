@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, Building2, ClipboardList, Package,
   UserCog, CalendarDays, Stethoscope, FlaskConical, Scan,
-  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText, PenLine
+  Pill, BedDouble, Receipt, BarChart3, Settings, Heart, BookOpen, FileText, PenLine, ShieldCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -39,6 +39,7 @@ const managementNav = [
   { title: 'Documents', url: '/documents', icon: FileText },
   { title: 'Knowledge Base', url: '/knowledge', icon: BookOpen },
   { title: 'Wiki', url: '/wiki', icon: PenLine },
+  { title: 'KMS Review', url: '/kms-review', icon: ShieldCheck },
 ];
 
 const adminNav = [

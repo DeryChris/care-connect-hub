@@ -1,4 +1,9 @@
+// src/contexts/SettingsContext.tsx
+// Syncs with /api/settings on mount, falls back to localStorage while loading.
+// External interface (useSettings, formatCurrency, updateSettings) is UNCHANGED.
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { settingsService } from '@/services';
 
 interface AppSettings {
   currency: string;
@@ -13,6 +18,10 @@ interface SettingsContextType {
   formatCurrency: (amount: number) => string;
 }
 
+const currencySymbols: Record<string, string> = {
+  USD: '$', EUR: '€', GBP: '£', INR: '₹', GHS: '₵',
+};
+
 const defaultSettings: AppSettings = {
   currency: 'GHS',
   currencySymbol: '₵',
@@ -20,25 +29,43 @@ const defaultSettings: AppSettings = {
   hospitalName: 'Care Connect Hospital',
 };
 
-const currencySymbols: Record<string, string> = {
-  USD: '$',
-  EUR: '€',
-  GBP: '£',
-  INR: '₹',
-  GHS: '₵',
-};
-
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => {
-    const saved = localStorage.getItem('app-settings');
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    try {
+      const saved = localStorage.getItem('app-settings');
+      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    } catch {
+      return defaultSettings;
+    }
   });
 
+  // Sync from API on mount
   useEffect(() => {
-    localStorage.setItem('app-settings', JSON.stringify(settings));
-    // Apply dark mode class to document
+    settingsService.list()
+      .then(res => {
+        const remote = res.data;
+        setSettings(prev => ({
+          ...prev,
+          hospitalName: remote.hospital_name ?? prev.hospitalName,
+          currency: remote.currency ?? prev.currency,
+          currencySymbol: currencySymbols[remote.currency ?? prev.currency] ?? prev.currencySymbol,
+          darkMode: remote.dark_mode === 'true',
+        }));
+      })
+      .catch(() => {
+        // API unavailable — keep local settings silently
+      });
+  }, []);
+
+  // Apply dark mode and persist locally whenever settings change
+  useEffect(() => {
+    try {
+      localStorage.setItem('app-settings', JSON.stringify(settings));
+    } catch {
+      // ignore storage errors
+    }
     if (settings.darkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -48,18 +75,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const updateSettings = (key: keyof AppSettings, value: string | boolean) => {
     setSettings(prev => {
-      const newSettings = { ...prev, [key]: value };
-      // Update currency symbol when currency changes
+      const next = { ...prev, [key]: value };
       if (key === 'currency') {
-        newSettings.currencySymbol = currencySymbols[value as string] || '$';
+        next.currencySymbol = currencySymbols[value as string] || '$';
       }
-      return newSettings;
+      return next;
     });
+
+    // Persist to backend
+    const apiKeyMap: Record<string, string> = {
+      hospitalName: 'hospital_name',
+      currency: 'currency',
+      darkMode: 'dark_mode',
+    };
+    const apiKey = apiKeyMap[key];
+    if (apiKey) {
+      settingsService.update(apiKey, value).catch(() => {});
+      if (key === 'currency') {
+        settingsService.update('currency_symbol', currencySymbols[value as string] || '$').catch(() => {});
+      }
+    }
   };
 
-  const formatCurrency = (amount: number): string => {
-    return `${settings.currencySymbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  const formatCurrency = (amount: number): string =>
+    `${settings.currencySymbol}${amount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
 
   return (
     <SettingsContext.Provider value={{ settings, updateSettings, formatCurrency }}>
@@ -69,9 +111,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export function useSettings() {
-  const context = useContext(SettingsContext);
-  if (!context) {
-    throw new Error('useSettings must be used within a SettingsProvider');
-  }
-  return context;
+  const ctx = useContext(SettingsContext);
+  if (!ctx) throw new Error('useSettings must be used within a SettingsProvider');
+  return ctx;
 }

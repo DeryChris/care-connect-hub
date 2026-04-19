@@ -45,7 +45,6 @@
     --sidebar-border: 150 25% 78%;
     --sidebar-ring: 168 35% 51%;
 
-    /* Improved success colors - brighter for visibility */
     --success: 150 60% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -101,6 +100,8 @@
 
   html {
     scroll-behavior: smooth;
+    /* Prevent font size inflation on mobile */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -108,16 +109,18 @@
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Prevent horizontal overflow at body level */
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  /* Improve scrollbar styling */
+  /* Scrollbar styling */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
@@ -133,11 +136,22 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--primary) / 0.6);
   }
+
+  /* Make images responsive by default */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Ensure tables don't break layout on mobile */
+  table {
+    width: 100%;
+  }
 }
 
 @layer components {
   .stat-card {
-    @apply bg-card rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+    @apply bg-card rounded-2xl border p-4 sm:p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
   }
 
   .page-header {
@@ -145,121 +159,107 @@
   }
 
   .page-title {
-    @apply text-2xl font-bold text-foreground;
+    @apply text-xl sm:text-2xl font-bold text-foreground;
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   .filter-bar {
-    @apply flex flex-wrap items-center gap-3 rounded-xl bg-card p-4 border shadow-sm;
+    @apply flex flex-wrap items-center gap-2 sm:gap-3 rounded-xl bg-card p-3 sm:p-4 border shadow-sm;
   }
 
   .stock-bar {
     @apply h-2 rounded-full;
   }
 
-  /* Improved card styling with rounded corners */
+  /* Card */
   .card {
     @apply rounded-2xl border shadow-sm;
   }
 
-  /* Better button rounded corners */
+  /* Button */
   .btn {
     @apply rounded-lg transition-all duration-200;
   }
 
-  /* Improved input styling */
+  /* Input */
   .input {
     @apply rounded-lg border-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
   }
 
-  /* Dialog/modal overlay improvements */
-  .dialog-overlay {
-    @apply backdrop-blur-sm;
-  }
-
-  /* Table row hover effects */
-  .table-row-hover {
-    @apply transition-colors duration-150 hover:bg-primary/5;
-  }
-
-  /* Badge improvements for visibility */
+  /* Badge colours */
   .badge-success {
     @apply bg-emerald-500 text-white font-medium;
   }
-  
   .badge-warning {
     @apply bg-amber-500 text-white font-medium;
   }
 
-  /* Mobile-friendly touch targets */
+  /* Minimum touch target size for mobile — apply to small icon buttons */
   .touch-target {
-    @apply min-h-[44px] min-w-[44px];
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
   }
 
-  /* Smooth page transitions */
+  /* Page entry animation */
   .animate-fade-in {
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.25s ease-out;
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
   /* Fluid container */
   .container-fluid {
-    @apply w-full px-4 sm:px-6 lg:px-8;
+    @apply w-full px-3 sm:px-4 lg:px-8;
   }
 
-  /* Better modal styling */
-  .modal-content {
-    @apply rounded-2xl shadow-2xl border-0;
+  /* Sheet overlay — make sure it sits on top of everything */
+  [data-radix-popper-content-wrapper] {
+    z-index: 50;
   }
 
-  /* Sidebar improvements */
+  /* Sidebar */
   .sidebar-item {
     @apply rounded-xl transition-all duration-200 hover:bg-primary/10;
   }
-
   .sidebar-item-active {
     @apply bg-primary text-primary-foreground shadow-md;
   }
+
+  /* Responsive data table wrapper — horizontal scroll on small screens */
+  .table-wrapper {
+    @apply w-full overflow-x-auto rounded-xl border;
+  }
+
+  /* Prose styles for rendered markdown — used in Wiki/Knowledge/Documents */
+  .prose-content {
+    @apply prose prose-sm max-w-none
+      prose-headings:font-bold prose-headings:text-foreground
+      prose-p:text-foreground/90 prose-strong:text-foreground
+      prose-table:w-full
+      prose-th:text-left prose-th:font-semibold prose-th:p-2 prose-th:border prose-th:bg-muted/50
+      prose-td:p-2 prose-td:border prose-td:text-foreground
+      prose-code:bg-muted prose-code:px-1 prose-code:rounded
+      prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground;
+  }
 }
 
-/* Utility for visible text on colored backgrounds */
-.text-on-primary {
-  color: hsl(var(--primary-foreground));
-}
+/* Utility colour helpers */
+.text-on-primary  { color: hsl(var(--primary-foreground)); }
+.text-on-success  { color: hsl(var(--success-foreground)); }
+.text-on-warning  { color: hsl(var(--warning-foreground)); }
 
-.text-on-success {
-  color: hsl(var(--success-foreground));
-}
+.text-success-bright { @apply text-emerald-600 dark:text-emerald-400 font-medium; }
+.text-warning-bright { @apply text-amber-600 dark:text-amber-400 font-medium; }
+.text-info-bright    { @apply text-blue-600 dark:text-blue-400 font-medium; }
 
-.text-on-warning {
-  color: hsl(var(--warning-foreground));
-}
-
-/* Dark mode text improvements */
+/* Dark mode muted text contrast boost */
 .dark .text-muted-foreground {
-  color: hsl(var(--muted-foreground) / 0.8);
+  color: hsl(var(--muted-foreground) / 0.85);
 }
 
-/* Ensure proper text contrast */
-.text-success-bright {
-  @apply text-emerald-600 dark:text-emerald-400 font-medium;
+/* Sheet — ensure full height on all screen sizes */
+[data-state="open"][role="dialog"] {
+  height: 100dvh;
 }
-
-.text-warning-bright {
-  @apply text-amber-600 dark:text-amber-400 font-medium;
-}
-
-.text-info-bright {
-  @apply text-blue-600 dark:text-blue-400 font-medium;
-}
-
