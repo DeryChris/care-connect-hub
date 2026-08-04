@@ -1,0 +1,126 @@
+-- SELECT * FROM public."KnowledgeArticle"
+-- ORDER BY id ASC 
+
+INSERT INTO public."KnowledgeArticle" (
+    id, title, category, tags, content, author_id, author_name, status, version, views, department_id, created_at, updated_at
+) VALUES
+(
+    gen_random_uuid(),  -- or use a specific UUID if needed
+    'Understanding Sepsis: Early Recognition and Management',
+	'guideline',
+    ARRAY['sepsis', 'critical care', 'early recognition', 'qSOFA', 'antibiotics'],
+    'Sepsis remains a leading cause of mortality in hospitalized patients. This article provides an in‑depth review of the pathophysiology of sepsis, from the initial dysregulated host response to organ dysfunction. It outlines evidence‑based strategies for early recognition using the qSOFA and NEWS2 scoring systems, highlights the importance of the “Sepsis Six” bundle (oxygen, cultures, antibiotics, fluids, lactate monitoring, and urine output), and discusses the latest Surviving Sepsis Campaign guidelines. Key considerations include appropriate fluid resuscitation, vasopressor selection, source control, and de‑escalation of antimicrobial therapy. The article also addresses post‑sepsis syndrome and long‑term follow‑up for survivors.',
+    'user-2',
+    'Dr. Sarah Wilson',
+    'review',
+    3,
+    1247,
+    'dept-1',
+    '2024-11-15 09:30:00+00',
+    '2025-02-10 14:22:00+00'
+),
+(
+    gen_random_uuid(),
+    'Effective Handover Communication: SBAR Framework',
+    'protocol',
+    ARRAY['handover', 'communication', 'SBAR', 'patient safety', 'shift change'],
+    'This article introduces the Situation‑Background‑Assessment‑Recommendation (SBAR) framework as a standardized communication tool for healthcare handovers. It explains each component with practical examples for nurse‑to‑nurse, nurse‑to‑physician, and inter‑shift handovers. The content includes common pitfalls in handoff communication, strategies to minimize information loss, and the role of bedside handovers in improving patient safety. It also reviews evidence from the WHO and Joint Commission on structured communication protocols, and provides downloadable templates and pocket cards for staff use.',
+    'user-4',
+    'Emily Davis',
+    'review',
+    2,
+    835,
+    'dept-4',
+    '2024-10-20 11:15:00+00',
+    '2025-01-05 08:45:00+00'
+),
+(
+    gen_random_uuid(),
+    'Venous Thromboembolism Prophylaxis in Surgical Patients',
+    'protocol',
+    ARRAY['VTE', 'prophylaxis', 'surgery', 'anticoagulation', 'Caprini'],
+    'A comprehensive guide on risk assessment and prevention of venous thromboembolism (VTE) in surgical patients. The article details the Caprini risk assessment model and its application across different surgical subspecialties. It reviews pharmacological options (unfractionated heparin, LMWH, direct oral anticoagulants) and mechanical prophylaxis (intermittent pneumatic compression, graduated compression stockings), including dosing adjustments for renal impairment and high‑bleed‑risk scenarios. Special considerations are given for neuraxial anesthesia, trauma patients, and bariatric surgery. The content aligns with the American College of Chest Physicians (CHEST) guidelines and includes a decision‑making algorithm.',
+    'user-3',
+    'Dr. James Chen',
+    'review',
+    4,
+    562,
+    'dept-1',
+    '2024-09-05 13:20:00+00',
+    '2025-02-18 09:10:00+00'
+),
+(
+    gen_random_uuid(),
+    'Introduction to Motivational Interviewing',
+    'training',
+    ARRAY['motivational interviewing', 'behavior change', 'counseling', 'communication skills'],
+    'This training article provides an overview of motivational interviewing (MI), a patient‑centered counseling style for eliciting behavior change. It covers the four core principles (partnership, acceptance, compassion, evocation) and the OARS micro‑skills (open questions, affirmations, reflections, summaries). The content includes video transcripts, role‑play scenarios, and practice worksheets to help clinicians apply MI in chronic disease management (diabetes, hypertension), substance use disorders, and lifestyle modifications. It also discusses how to recognize and respond to “change talk” and “sustain talk” in clinical encounters.',
+    'user-2',
+    'Dr. Sarah Wilson',
+    'review',
+    1,
+    312,
+    'dept-5',
+    '2025-01-10 10:00:00+00',
+    '2025-02-20 15:30:00+00'
+),
+(
+    gen_random_uuid(),
+    'Workplace Violence Prevention in Healthcare Settings',
+    'guideline',
+    ARRAY['workplace violence', 'safety', 'de‑escalation', 'staff training', 'policy'],
+    'An essential resource for healthcare administrators and security teams on preventing and responding to workplace violence. The article analyzes types of violence (Type II – patient/visitor‑on‑staff being most common) and presents a multi‑pronged prevention framework: environmental design (access control, panic alarms), administrative controls (staffing ratios, incident reporting), and behavioral interventions (de‑escalation training, code white teams). It also outlines the legal obligations under OSHA and state workplace safety laws, and includes sample security risk assessments and post‑incident support protocols for affected staff.',
+    'user-1',
+    'Admin User',
+    'review',
+    2,
+    478,
+    'dept-6',
+    '2024-12-01 08:00:00+00',
+    '2025-02-05 11:20:00+00'
+),
+(
+    gen_random_uuid(),
+    'Opioid Stewardship: Balancing Pain Management and Safety',
+    'guideline',
+    ARRAY['opioids', 'pain management', 'stewardship', 'addiction', 'naloxone'],
+    'A clinical guideline for implementing opioid stewardship programs across inpatient and outpatient settings. It reviews principles of multimodal analgesia, non‑opioid alternatives, risk assessment for opioid use disorder, and appropriate prescribing of immediate‑release vs. extended‑release opioids. The article also covers safe disposal of unused opioids, use of prescription drug monitoring programs (PDMP), and the role of naloxone co‑prescribing. Case studies illustrate how to manage patients with chronic pain, acute pain, and those at high risk for respiratory depression or diversion.',
+    'user-3',
+    'Dr. James Chen',
+    'review',
+    3,
+    901,
+    'dept-1',
+    '2024-08-15 14:45:00+00',
+    '2025-01-28 16:00:00+00'
+),
+(
+    gen_random_uuid(),
+    'Electronic Health Record (EHR) Documentation Best Practices',
+    'training',
+    ARRAY['EHR', 'documentation', 'clinical workflow', 'billing', 'compliance'],
+    'This training module provides physicians, nurses, and other clinicians with best practices for efficient and compliant EHR documentation. It covers note structure (SOAP, APSO), use of templates and dot‑phrases, maintaining clinical reasoning transparency, and avoiding cloning or copy‑forward errors. The article also highlights documentation requirements for billing (e.g., medical decision making, time‑based coding), meaningful use measures, and medicolegal considerations. Interactive examples demonstrate how to document complex encounters while balancing efficiency and quality.',
+    'user-4',
+    'Emily Davis',
+    'review',
+    5,
+    1523,
+    'dept-3',
+    '2024-07-22 09:00:00+00',
+    '2025-02-14 13:40:00+00'
+),
+(
+    gen_random_uuid(),
+    'Palliative Care: Symptom Management at End of Life',
+    'sop',
+    ARRAY['palliative care', 'end of life', 'symptom management', 'advanced care planning'],
+    'A comprehensive guide for clinicians on providing palliative care to patients with serious illness, focusing on symptom management and communication. The article addresses dyspnea, pain, delirium, nausea, and terminal agitation with evidence‑based pharmacological and non‑pharmacological approaches. It includes guidance on advanced care planning conversations, goals of care documentation, and the distinction between palliative care and hospice. Cultural considerations in end‑of‑life care and support for the patient’s family are also discussed.',
+    'user-2',
+    'Dr. Sarah Wilson',
+    'review',
+    2,
+    684,
+    'dept-2',
+    '2024-11-30 15:30:00+00',
+    '2025-02-10 10:15:00+00'
+);
